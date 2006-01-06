@@ -1,0 +1,32 @@
+Net-MirrorDir version 0.01
+==========================
+
+This module is written as base class for Net::UploadMirror and Net::DownloadMirror.
+However, it can be used, also for something other.
+It can compare local-directories and remote-directories with each other.
+In order to find which files where in which directory available.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+  Net::FTP
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2006 by Torsten Knorr
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.9.2 or,
+at your option, any later version of Perl 5 you may have available.
+
+

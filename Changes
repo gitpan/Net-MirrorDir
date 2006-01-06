@@ -1,0 +1,6 @@
+Revision history for Perl extension Net::MirrorDir.
+
+0.01  Thu Jan  5 12:01:41 2006
+	- original version; created by h2xs 1.23 with options
+		-XAn Net::MirrorDir
+
