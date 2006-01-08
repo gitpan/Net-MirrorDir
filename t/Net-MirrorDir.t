@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 225;
+ use Test::More tests => 292;
 # use Test::More "no_plan";
 BEGIN { use_ok('Net::MirrorDir') };
 
@@ -44,6 +44,7 @@ BEGIN { use_ok('Net::MirrorDir') };
  	};
  my $ref_h_test_remote_dirs =
  	{
+ 	"TestD"			=> 1,
  	"TestD/TestB"		=> 1,
  	"TestD/TestB/TestC"	=> 1,
  	"TestD/TestB/TestC/Dir1"	=> 1,
@@ -60,14 +61,14 @@ BEGIN { use_ok('Net::MirrorDir') };
  	$ref_h_local_dirs, $ref_h_test_remote_dirs));
  ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
  can_ok($mirror, "RemoteNotInLocal");
- $ref_h_test_remote_files->{"TestA/TestB/TestC/Dir6/test6.txt"} = 1;
- $ref_h_test_remote_dirs->{"TestA/TestB/TestC/Dir6"} = 1;
+ $ref_h_test_remote_files->{"TestD/TestB/TestC/Dir6/test6.txt"} = 1;
+ $ref_h_test_remote_dirs->{"TestD/TestB/TestC/Dir6"} = 1;
  ok(my $ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
  	$ref_h_local_files, $ref_h_test_remote_files));
- ok("TestA/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
+ ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
  ok(my $ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
  	$ref_h_local_dirs, $ref_h_test_remote_dirs));
- ok("TestA/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
+ ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
  ok($mirror->set_Item());
  ok($mirror->get_Item());
  ok($mirror->GETItem());
@@ -92,7 +93,25 @@ BEGIN { use_ok('Net::MirrorDir') };
  ok(my $ftpserver = $mirror->Get_Ftpserver());
  ok($ftpserver eq "ftp.net.de");
  ok($mirror->set_usr("myself"));
- for(my $i = 1; $i <= 3; $i++)
+ ok($mirror->ReadLocalDir("TestA"));
+ ok($mirror->SetRemoteDir("TestD"));
+ ok($mirror->SetLocalDir("TestA"));
+ ok($mirror->GetLocalFiles());
+ ok($mirror->GetLocalDirs());
+ ok($ref_a_new_local_files = $mirror->LocalNotInRemote(
+ 	$mirror->GetLocalFiles(), $ref_h_test_remote_files));
+ ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ref_a_new_local_files->[0]);
+ ok($ref_a_new_local_dirs = $mirror->LocalNotInRemote(
+ 	$mirror->GetLocalDirs(), $ref_h_test_remote_dirs));
+ ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
+ ok($ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
+ 	$mirror->GetLocalFiles(), $ref_h_test_remote_files));
+ ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
+ ok($ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
+ 	$mirror->GetLocalDirs(), $ref_h_test_remote_dirs));
+ ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
+#-------------------------------------------------
+  for(my $i = 1; $i <= 3; $i++)
  	{
  	for(keys(%{$mirror}))
  		{
