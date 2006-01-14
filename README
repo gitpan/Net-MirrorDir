@@ -1,4 +1,4 @@
-Net-MirrorDir version 0.02
+Net-MirrorDir version 0.03
 ==========================
 
 This module is written as base class for Net::UploadMirror and Net::DownloadMirror.

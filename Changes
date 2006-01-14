@@ -9,4 +9,6 @@ Revision history for Perl extension Net::MirrorDir.
  	- add some tests
  	- remove Exporter.pm, also in future nothing will be to be exported
 
+0.03 Fri Jan 13 18:10:57 2006
+ 	- change our $VERSION in $Net::MirrorDir::VERSION
 
