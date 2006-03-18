@@ -1,4 +1,3 @@
-#!/usr/local/bin/perl5.9.2 -w
 #*** MirrorDir.pm ***#
 # Copyright (C) 2006 Torsten Knorr
 # create-soft@tiscali.de
@@ -11,7 +10,7 @@
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.03';
+ $Net::MirrorDir::VERSION = '0.05';
 #-------------------------------------------------
  sub new
  	{
@@ -321,6 +320,12 @@ Net::DownloadMirror, default "disabled"
 =item connection
 takes a Net::FTP-object you should not use that,
 instead of this call the Connect(); function to set the connection.
+Following functions of the used FTP-object should be identical
+to the Net::FTP-object functions.
+ 	cwd(path), 
+ 	size(file), 
+ 	mdtm(file), 
+ 	ls(path),
 default undef
 
 =item exclusions
@@ -397,7 +402,7 @@ Maybe you'll find some. Let me know.
 
 =head1 AUTHOR
 
-Torsten Knorr, E<lt>knorrcpan@tiscali.deE<gt>
+Torsten Knorr, E<lt>torstenknorr@tiscali.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
@@ -409,4 +414,6 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
+
 

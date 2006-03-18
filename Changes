@@ -1,14 +1,26 @@
 Revision history for Perl extension Net::MirrorDir.
 
-0.01  Thu Jan  5 12:01:41 2006
-	- original version; created by h2xs 1.23 with options
-		-XAn Net::MirrorDir
+0.05 Sat Mar 18 20:07:45 2006
+ 	- bugfix in Makefile.PL
+
+0.04 Sat Mar 11 11:59:21 2006
+ 	- add some documentation
+
+0.03 Fri Jan 13 18:10:57 2006
+ 	- change our $VERSION in $Net::MirrorDir::VERSION
 
 0.02 Sun Jan 8 12:46:38 2006
  	- some changes in ReadLocalDir and ReadRemoteDir for more OOP style
  	- add some tests
  	- remove Exporter.pm, also in future nothing will be to be exported
 
-0.03 Fri Jan 13 18:10:57 2006
- 	- change our $VERSION in $Net::MirrorDir::VERSION
+0.01  Thu Jan  5 12:01:41 2006
+	- original version; created by h2xs 1.23 with options
+		-XAn Net::MirrorDir
+
+
+
+
+
+
 
