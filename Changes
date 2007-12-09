@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.06 Sat Dec 8 19:52:09 2007
+	-  if functions ReadLocalDir() or ReadRemoteDir() fails, they return empty lists
+
 0.05 Sat Mar 18 20:07:45 2006
  	- bugfix in Makefile.PL
 

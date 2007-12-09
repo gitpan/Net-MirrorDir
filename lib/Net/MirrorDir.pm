@@ -1,16 +1,15 @@
 #*** MirrorDir.pm ***#
-# Copyright (C) 2006 Torsten Knorr
+# Copyright (C) 2006 - 2007 by Torsten Knorr
 # create-soft@tiscali.de
 # All rights reserved!
 #-------------------------------------------------
  package Net::MirrorDir;
 #-------------------------------------------------
  use strict;
- use warnings;
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.05';
+ $Net::MirrorDir::VERSION = '0.06';
 #-------------------------------------------------
  sub new
  	{
@@ -64,8 +63,8 @@
  sub ReadLocalDir
  	{ 
  	my ($self, $path) = @_;
- 	delete($self->{_localfiles}{$_}) for(keys(%{$self->{_localfiles}}));
- 	delete($self->{_localdirs}{$_}) for(keys(%{$self->{_localdirs}}));
+ 	$self->{_localfiles} = ();
+ 	$self->{_localdirs} = ();
  	$self->{_readlocaldir} = sub
  		{
  		my ($self, $p) = @_;
@@ -94,6 +93,7 @@
  			return $self->{_localfiles}, $self->{_localdirs};
  			}
  		warn("$p is neither a file nor a directory\n");
+		return($self->{_localfiles}, $self->{_localdirs});
  		};
  	return $self->{_readlocaldir}->($self, ($path or $self->{_localdir}));
  	}
@@ -102,8 +102,8 @@
  	{
  	my ($self, $path) = @_;
  	return if(!(defined($self->{_connection})));
- 	delete($self->{_remotefiles}{$_}) for(keys(%{$self->{_remotefiles}}));
- 	delete($self->{_remotedirs}{$_}) for(keys(%{$self->{_remotedirs}}));
+ 	$self->{_remotefiles} = ();
+ 	$self->{_remotedirs} = ();
  	$self->{_readremotedir} = sub 
  		{
  		my ($self, $p) = @_;
@@ -121,6 +121,7 @@
  			return $self->{_remotefiles}, $self->{_remotedirs};
  			}
  		warn("$p is neither a file nor a directory\n");
+		return($self->{_remotefiles}, $self->{_remotedirs});
  		};
  	return $self->{_readremotedir}->($self, ($path or $self->{_remotedir}));
  	}
@@ -171,7 +172,7 @@
  			}
  		else
  			{
- 			warn("NO such attriute : $attr\n");
+ 			warn("NO such attribute : $attr\n");
  			}
  		}
  	elsif($AUTOLOAD =~ m/(?:\w|:)*::(?i:set)_*(\w+)/) 
@@ -402,11 +403,11 @@ Maybe you'll find some. Let me know.
 
 =head1 AUTHOR
 
-Torsten Knorr, E<lt>torstenknorr@tiscali.deE<gt>
+Torsten Knorr, E<lt>create-soft@tiscali.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2006 by Torsten Knorr
+Copyright (C) 2006 - 2007 by Torsten Knorr
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.9.2 or,
@@ -414,6 +415,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 
