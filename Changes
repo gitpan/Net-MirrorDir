@@ -1,7 +1,13 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.07 Mon Jan 14 19:42:04 2008
+ 	- insert the argument subset
+ 	- insert an add function for "subet" and "exclusions" created by $AUTOLOAD
+ 	- add some documentation
+
 0.06 Sat Dec 8 19:52:09 2007
-	-  if functions ReadLocalDir() or ReadRemoteDir() fails, they return empty lists
+	-  if functions ReadLocalDir() or ReadRemoteDir() fails, they return
+ 	hashreferences to empty hashs
 
 0.05 Sat Mar 18 20:07:45 2006
  	- bugfix in Makefile.PL
@@ -20,6 +26,8 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
+
 
 
 
