@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.08 Sat Jan 19 18:48:40 2008
+ 	- insert a abstract method _Init()
+
 0.07 Mon Jan 14 19:42:04 2008
  	- insert the argument subset
  	- insert an add function for "subet" and "exclusions" created by $AUTOLOAD
@@ -26,6 +29,7 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
 
 
 

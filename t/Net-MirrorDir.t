@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 463;
+ use Test::More tests => 465;
 # use Test::More "no_plan";
 BEGIN { use_ok('Net::MirrorDir') };
 
@@ -21,6 +21,8 @@ BEGIN { use_ok('Net::MirrorDir') };
  	pass		=> "xyz", 	
  	);
  isa_ok($mirror, "Net::MirrorDir");
+ can_ok($mirror, "_Init");
+ ok(!$mirror->_Init());
  can_ok($mirror, "Connect");
  ok($mirror->SetConnection(1));
  ok($mirror->Connect());
@@ -214,4 +216,6 @@ BEGIN { use_ok('Net::MirrorDir') };
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
+
 
