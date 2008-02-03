@@ -3,68 +3,102 @@
 # create-soft@tiscali.de
 # All rights reserved!
 #-------------------------------------------------
+ use strict;
+#-------------------------------------------------
+ package Net::MirrorDir::LocalDir;
+ sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub STORE { ${$_[0]}->{_regex_localdir} = qr!^\Q$_[1]\E!; }
+ sub FETCH { return(${$_[0]}->{_localdir}); }
+#-------------------------------------------------
+ package Net::MirrorDir::RemoteDir;
+ sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub STORE { ${$_[0]}->{_regex_remotedir} = qr!^\Q$_[1]\E!; }
+ sub FETCH { return(${$_[0]}->{_remotedir}); }
+#-------------------------------------------------
+ package Net::MirrorDir::Exclusions;
+ sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub STORE { @{${$_[0]}->{_regex_exclusions}} = map { qr/$_/ } @{${$_[0]}->{_exclusions}}; }
+ sub FETCH { return(${$_[0]}->{_exclusions}); }
+#-------------------------------------------------
+ package Net::MirrorDir::Subset;
+ sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub STORE { @{${$_[0]}->{_regex_subset}} = map { qr/$_/ } @{${$_[0]}->{_subset}}; }
+ sub FETCH { return(${$_[0]}->{_subset}); }
+#-------------------------------------------------
  package Net::MirrorDir;
 #-------------------------------------------------
- use strict;
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.08';
+ $Net::MirrorDir::VERSION = '0.09';
 #-------------------------------------------------
  sub new
  	{
  	my ($class, %arg) = @_;
  	my $self =
  		{
- 		_localdir		=> $arg{localdir}		|| '.',
- 		_remotedir	=> $arg{remotedir}	|| '/',
  		_ftpserver	=> $arg{ftpserver}		|| warn("missing ftpserver"),
  		_usr		=> $arg{usr}		|| warn("missing username"),
  		_pass		=> $arg{pass}		|| warn("missing password"),
  		_debug		=> $arg{debug}		|| 1,
  		_timeout		=> $arg{timeout}		|| 30,
- 		_delete		=> $arg{delete}		|| "disabled",
  		_connection	=> $arg{connection}	|| undef,
- 		_exclusions	=> $arg{exclusions}	|| [],
- 		_subset		=> $arg{subset}		|| [],
  		};
  	bless($self, $class || ref($class));
-	$self->_Init(%arg);
+ 	tie($self->{_localdir},	"Net::MirrorDir::LocalDir", $self);
+ 	tie($self->{_remotedir},	"Net::MirrorDir::RemoteDir", $self);
+ 	tie($self->{_exclusions},	"Net::MirrorDir::Exclusions", $self);
+ 	tie($self->{_subset},	"Net::MirrorDir::Subset", $self);
+ 	$self->{_localdir}		= $arg{localdir}	|| '.';
+ 	$self->{_remotedir}	= $arg{remotedir}	|| '/';
+ 	$self->{_exclusions}	= $arg{exclusions}	|| [];
+ 	$self->{_subset}		= $arg{subset}	|| [];
+	$self->_Init(%arg) if(__PACKAGE__ ne ref($self));
  	return($self);
  	}
 #-------------------------------------------------
  sub _Init
 	{
-	warn("\n\ncall to abstract method _Init()\n");
+	warn("\n\ncall to abstract method _Init() from package: " . ref($_[0]) . "\n");
  	return(0);
 	}
 #------------------------------------------------
  sub Connect
  	{
  	my ($self) = @_;
- 	return $self->{_connection} if($self->{_connection});
- 	 $self->{_connection} = Net::FTP->new(
- 		$self->{_ftpserver},
- 		Debug	=> $self->{_debug},
- 		Timeout	=> $self->{_timeout},
- 		) or warn("Cannot connect to $self->{_ftpserver} : $@\n");
- 	if($self->{_connection}->login($self->{_usr}, $self->{_pass}))
+ 	return($self->{_connection}) if($self->IsConnection());
+ 	eval
  		{
- 		 $self->{_connection}->binary();
- 		}
- 	else
- 		{
- 		$self->{_connection}->quit();
- 		$self->{_connection} = undef;
- 		return(0);
- 		}
- 	return(1);
+ 	 	$self->{_connection} = Net::FTP->new(
+ 			$self->{_ftpserver},
+ 			Debug	=> $self->{_debug},
+ 			Timeout	=> $self->{_timeout},
+ 			) or warn("Cannot connect to $self->{_ftpserver} : $@\n");
+ 		if($self->{_connection}->login($self->{_usr}, $self->{_pass}))
+ 			{
+ 		 	$self->{_connection}->binary();
+ 			}
+ 		else
+ 			{
+ 			$self->{_connection}->quit();
+ 			$self->{_connection} = undef;
+ 			return(0);
+ 			}
+ 		return(1);
+ 		};
+ 	}
+#-------------------------------------------------
+ sub IsConnection
+ 	{
+ 	my $dir;
+ 	eval { $dir = $_[0]->{_connection}->pwd(); };
+ 	return($dir);
  	}
 #-------------------------------------------------
  sub Quit
  	{
  	my ($self) = @_;
- 	$self->{_connection}->quit() if($self->{_connection});
+ 	$self->{_connection}->quit() if($self->IsConnection());
  	$self->{_connection} = undef;
  	return(1);
  	}
@@ -79,20 +113,18 @@
  		my ($self, $p) = @_;
  		if(-f $p)
  			{
- 			if(@{$self->{_subset}})
+ 			if(!@{$self->{_regex_subset}})
  				{
-				for(@{$self->{_subset}})
- 					{
-  					if($p =~ m/$_/)
- 						{
- 						$self->{_localfiles}{$p} = 1;
- 						last;
- 						}
- 					}
+ 				$self->{_localfiles}{$p} = 1;
+ 				return($self->{_localfiles}, $self->{_localdirs});
  				}
- 			else
+ 			for(@{$self->{_regex_subset}})
  				{
- 				$self->{_localfiles}{$p} = 1;	
+ 				if($p =~ $_)
+ 					{	
+ 					$self->{_localfiles}{$p} = 1;
+ 					last;
+ 					}
  				}
  			return($self->{_localfiles}, $self->{_localdirs});
  			}
@@ -102,15 +134,11 @@
  			opendir(PATH, $p) or
  				die("error in opendir $p : 
  				at Net::MirrorDir::ReadLocalDir() : $!\n");
- 			my @files = readdir(PATH);
+ 			my @files = grep { $_ ne '.' and $_ ne '..' } readdir(PATH);
  			closedir(PATH);
- 			L_FILE: for my $file (@files)
+ 			for my $file (@files)
  				{
- 				next if(($file eq ".") or ($file eq ".."));
- 				for(@{$self->{_exclusions}})
- 					{
- 					next("L_FILE") if(($file =~ m/$_/));
- 					}
+ 				next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
  				$self->{_readlocaldir}->($self, "$p/$file");
  				}
  			return($self->{_localfiles}, $self->{_localdirs});
@@ -124,7 +152,7 @@
  sub ReadRemoteDir
  	{
  	my ($self, $path) = @_;
- 	return if(!(defined($self->{_connection})));
+ 	return({}, {}) if(!$self->IsConnection());
  	$self->{_remotefiles} = {};
  	$self->{_remotedirs} = {};
  	$self->{_readremotedir} = sub 
@@ -132,37 +160,32 @@
  		my ($self, $p) = @_;
  		if(defined($self->{_connection}->size($p)))
  			{
- 			if(@{$self->{_subset}})
- 				{
- 				for(@{$self->{_subset}})
- 					{
- 					if($p =~ m/$_/)
- 						{
- 						$self->{_remotefiles}{$p} = 1;
- 						last;
- 						}
- 					}
- 				}
- 			else
+ 			if(!@{$self->{_regex_subset}})
  				{
  				$self->{_remotefiles}{$p} = 1;
+ 				return($self->{_remotefiles}, $self->{_remotedirs});
  				}
- 			return $self->{_remotefiles}, $self->{_remotedirs};
+ 			for(@{$self->{_regex_subset}})
+ 				{
+ 				if($p =~ $_)
+ 					{
+ 					$self->{_remotefiles}{$p} = 1;
+ 					last;
+ 					}
+ 				}
+ 			return($self->{_remotefiles}, $self->{_remotedirs});
  			}
  		if($self->{_connection}->cwd($p))
  			{
  			$self->{_connection}->cwd();
  			$self->{_remotedirs}{$p} = 1;
  			my @files = $self->{_connection}->ls($p);
-			R_FILE: for my $file (@files)
+			for my $file (@files)
  				{
- 				for(@{$self->{_exclusions}})
- 					{
- 					next("R_FILE") if(($file =~ m/$_/));
- 					}
+ 				next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
  				$self->{_readremotedir}->($self, "$p/$file");
  				}
- 			return $self->{_remotefiles}, $self->{_remotedirs};
+ 			return($self->{_remotefiles}, $self->{_remotedirs});
  			}
  		warn("$p is neither a file nor a directory\n");
 		return($self->{_remotefiles}, $self->{_remotedirs});
@@ -178,7 +201,7 @@
  	for(keys(%{$ref_h_local_paths}))
  		{
  		$r_path = $_;
- 		$r_path =~ s!^$self->{_localdir}!$self->{_remotedir}!;
+ 		$r_path =~ s!$self->{_regex_localdir}!$self->{_remotedir}!;
  		push(@files, $_) if(!(defined($ref_h_remote_paths->{$r_path})));
  		}
  	return(\@files);
@@ -192,7 +215,7 @@
  	for(keys(%{$ref_h_remote_paths}))
  		{
  		$l_path = $_;
- 		$l_path =~ s!^$self->{_remotedir}!$self->{_localdir}!;
+ 		$l_path =~ s!$self->{_regex_remotedir}!$self->{_localdir}!;
  		push(@files, $_) if(!(defined($ref_h_local_paths->{$l_path})));
  		}
  	return(\@files);
@@ -246,10 +269,10 @@
  			{
  			*{$AUTOLOAD} = sub
  				{
- 				push(@{$_[0]->{$attr}}, $_[1]);
+ 				$_[0]->{$attr} = [@{$_[0]->{$attr}}, $_[1]];
  				return(1);
  				};
- 			push(@{$self->{$attr}}, $value);
+ 			$self->{$attr} = [@{$self->{$attr}}, $value]; 
  			return(1);
  			}
  		else
@@ -305,11 +328,10 @@ Net::MirrorDir - Perl extension for compare local-directories and remote-directo
  	remotedir	=> "public",
  	debug		=> 1 # 1 for yes, 0 for no
  	timeout		=> 60 # default 30
- 	delete		=> "enable" # default "disabled"
  	connection	=> $ftp_object, # default undef
-# "exclusions" default empty arrayreferences [ ]
+# "exclusions" default references to a empty array []
  	exclusions	=> ["private.txt", "Thumbs.db", ".sys", ".log"],
-# "subset" default empty arrayreferences [ ]
+# "subset" default references to a empty array []
  	subset		=> [".txt, ".pl", ".html", "htm", ".gif", ".jpg", ".css", ".js", ".png"]
 # or substrings in pathnames
 #	exclusions	=> ["psw", "forbidden_code"]
@@ -358,13 +380,13 @@ Net::MirrorDir - Perl extension for compare local-directories and remote-directo
 =head1 DESCRIPTION
 
 This module is written as base class for Net::UploadMirror and Net::DownloadMirror.
-Howevr, it can be used, also for something other.
+However, it can be used, also for themselves alone.
 It can compare local-directories and remote-directories with each other.
-In order to find which files where in which directory available.
+To find which files where in which directory available.
 
 =head1 Constructor and Initialization
 
-=item (object) new (options)
+=item (object)Net::MirrrorDir->new(options)
 
 =head2 required optines
 
@@ -380,97 +402,87 @@ password for authentification
 =head2 optional optiones
 
 =item localdir
-local directory selecting information from, default '.'
+local directory 
+default = '.'
 
 =item remotedir
-remote location selecting information from, default '/' 
+remote location
+default '/' 
 
 =item debug
-set it true for more information about the ftp-process, default 1 
+set it true for more information about the ftp-process
+default 1 
 
 =item timeout
-the timeout for the ftp-serverconnection
-
-=item delete
-this attribute is used in the child-class Net::UploadMirror and
-Net::DownloadMirror, default "disabled"
+the timeout for the ftp-serverconnection, default 30
 
 =item connection
-takes a Net::FTP-object you should not use that,
+takes a Net::FTP-object, you should not create the object by yourself,
 instead of this call the Connect(); function to set the connection.
-Following functions of the used FTP-object should be identical
-to the Net::FTP-object functions.
- 	cwd(path), 
- 	size(file), 
- 	mdtm(file), 
- 	ls(path),
 default undef
 
 =item exclusions
-a reference to a list of strings interpreted as regular-expressios ("regex") 
-matching to something in the local or remote pathnames, you do not want to list, 
-You can also use a regex direct [qr/PASS/i, $regex, "system"]
-default empty list [ ]
+takes a reference to a array of strings interpreted as regular-expressios 
+matching to something in the local or remote pathnames,
+pathnames matching will be ignored
+You can also use a regex object [qr/PASS/i, $regex, "system"]
+default []
 
 =item subset
-a reference to a list of strings interpreted as regular-expressios ("regex") 
-matching to something in the local or remote pathnames, pathnames NOT containing
-the string will be ignored.
-You can also use a regex direct [qr/TXT/i, "name", qr/MY_FILES/i, $regex]
-default empty list [ ]
+takes a reference to a list of strings interpreted as regular-expressios 
+matching to something in the local or remote pathnames,
+pathnames NOT matching will be ignored.
+You can also use a regex object [qr/TXT/i, "name", qr/MY_FILES/i, $regex]
+default []
 
 =head2 methods
 
-=item (ref_hash_local_files, ref_hash_local_dirs) object->ReadLocalDir (void)
-=item (ref_hash_local_files, ref_hash_local_dirs) object->ReadLocalDir (path)
-=item (void) object->ReadLocalDir (path)
-Returns two hashreferences first  the local-files, second the local-directorys
-found in the directory given by the MirrorDir-object,
-(uses the attribute "localdir") or given directly as parameter.
-The values are in the keys. You can also call the functions 
- (ref_hash_local_dirs) object->GetLocalDirs()
- (ref_hash_local_files) object->GetLocalFiles()
+=item (ref_hash_local_files, ref_hash_local_dirs)object->ReadLocalDir(void)
+=item (ref_hash_local_files, ref_hash_local_dirs)object->ReadLocalDir(path)
+The directory, indicated with the attribute "localdir" or directly as parameter, is searched.
+Returns two hashreferences first  the local-files, second the local-directorys.
+The values are in the keys. You can also call the functions: 
+ (ref_hash_local_dirs)object->GetLocalDirs(void)
+ (ref_hash_local_files)object->GetLocalFiles(void)
 in order to receive the results.
-If ReadLocalDir() fails, it returns hashreferences to empty hashs.
+If ReadLocalDir() fails, it returns references to empty hashs.
 
-=item (ref_hash_remote_files, ref_hash_remote_dirs) object->ReadRemoteDir (void)
-=item (ref_hash_remote_files, ref_hash_remote_dirs) object->ReadRemoteDir(path)
-=item (void) object->ReadRemoteDir (path)
-Returns two hashreferences first the remote-files, second the remote-directorys
-found in the directory given by the MirrorDir-object,
-(uses the attribute "remotedir") or given directly as parameter. 
-The values are in the keys. You can also call the functions
- (ref_hash_remote_files) object->GetRemoteFiles()
- (ref_hash_remote_dirs) object->GetRemoteDirs()
+=item (ref_hash_remote_files, ref_hash_remote_dirs)object->ReadRemoteDir(void)
+=item (ref_hash_remote_files, ref_hash_remote_dirs)object->ReadRemoteDir(path)
+The directory, inidcated with the attribute "remotedir" or directly as parameter, is searched.
+Returns two hashreferences first the remote-files, second the remote-directorys.
+The values are in the keys. You can also call the functions:
+ (ref_hash_remote_files)object->GetRemoteFiles(void)
+ (ref_hash_remote_dirs)object->GetRemoteDirs(void)
 in order to receive the results.
-If ReadRemoteDir() fails, it returns hashreferences to empty hashs.
+If ReadRemoteDir() fails, it returns references to empty hashs.
 
-=item (1) object->Connect (void)
+=item (1|0)object->Connect(void)
 Makes the connection to the ftp-server.
-Uses the attributes "ftpserver", "usr" and "pass" given by the MirrorDir-object.
+Uses the attributes "ftpserver", "usr" and "pass".
 
-=item (1) object->Quit (void)
+=item (1)object->Quit(void)
 Closes the connection with the ftp-server.
 
-=item (ref_hash_local_paths, ref_hash_remote_paths) object->LocalNotInRemote (ref_list_new_paths)
-Takes two hashreferences, given by the functions ReadLocalDir(); and ReadRemoteDir();
-to compare with each other. Returns a reference of a list with files or directorys found in 
-the local directory but not in the remote location. Uses the attribute "localdir" and 
-"remotedir" given by the MirrorDir-object.
+=item (ref_list_new_paths)object->LocalNotInRemote(ref_hash_local_paths, ref_hash_remote_paths)
+Takes two hashreferences, first the localpaths, second the remotepaths,
+to compare with each other. 
+Returns a reference of a list with files or directorys found in 
+the local directory but not in the remote location.
 
-=item (ref_hash_local_paths, ref_hash_remote_paths) object->RemoteNotInLocal (ref_list_deleted_paths)
-Takes two hashreferences, given by the functions ReadLocalDir(); and ReadRemoteDir();
-to compare with each other. Returns a reference of a list with files or directorys found in 
-the remote location but not in the local directory. Uses of the attribure "localdir" and 
-"remotedir" given by the MirrorDir-object.
+=item (ref_list_deleted_paths)object->RemoteNotInLocal(ref_hash_local_paths, ref_hash_remote_paths)
+Takes two hashreferences, first the localpaths, second the remotepaths,
+to compare with each other. 
+Returns a reference of a list with files or directorys found in 
+the remote location but not in the local directory.
 
-=item (value) object->get_option (void)
-=item (1)  object->set_option (value)
-The functions are generated by AUTOLOAD for all options.
+=item (value)object->get_option(void)
+=item (1)object->set_option(value)
+The functions are generated by AUTOLOAD, for all options.
 The syntax is not case-sensitive and the character '_' is optional.
 
 =item (1) object->add_option(value)
-The functions are generated by AUTOLOAD for arrayrefrences options.
+The functions are generated by AUTOLOAD, for arrayrefrences options.
 Like "subset" or "exclusions"
 The syntax is not case-sensitive and the character '_' is optional.
 
@@ -514,8 +526,6 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
-
-
 
 
 

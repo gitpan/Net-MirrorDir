@@ -5,9 +5,9 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 465;
+ use Test::More tests => 218;
 # use Test::More "no_plan";
-BEGIN { use_ok('Net::MirrorDir') };
+ BEGIN { use_ok('Net::MirrorDir') };
 
 #########################
 
@@ -24,9 +24,7 @@ BEGIN { use_ok('Net::MirrorDir') };
  can_ok($mirror, "_Init");
  ok(!$mirror->_Init());
  can_ok($mirror, "Connect");
- ok($mirror->SetConnection(1));
- ok($mirror->Connect());
- ok($mirror->SetConnection(undef));
+ can_ok($mirror, "IsConnection");
  can_ok($mirror, "Quit");
  ok($mirror->Quit());
  can_ok($mirror, "ReadLocalDir");
@@ -34,8 +32,6 @@ BEGIN { use_ok('Net::MirrorDir') };
  warn("files : $_\n") for(sort keys(%{$ref_h_local_files}));
  warn("dirs : $_\n") for(sort keys(%{$ref_h_local_dirs}));
  can_ok($mirror, "ReadRemoteDir");
-# for this test we need a connection to a FTP-Server
-# ok(my $ref_remote_files, $ref_remote_dirs) = $mirror->ReadRemoteDir());
  my $ref_h_test_remote_files =
  	{
 	"TestD/TestB/TestC/Dir1/test1.txt"		=> 1,
@@ -58,20 +54,30 @@ BEGIN { use_ok('Net::MirrorDir') };
  	"TestD/TestB/TestC/Dir5"	=> 1,
  	};
  can_ok($mirror, "LocalNotInRemote");
+ ok($mirror->LocalNotInRemote({}, {}));
  ok(my $ref_a_new_local_files = $mirror->LocalNotInRemote(
- 	$ref_h_local_files, $ref_h_test_remote_files));
+ 	$ref_h_local_files,
+ 	$ref_h_test_remote_files
+ 	));
  ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ref_a_new_local_files->[0]);
  ok(my $ref_a_new_local_dirs = $mirror->LocalNotInRemote(
- 	$ref_h_local_dirs, $ref_h_test_remote_dirs));
+ 	$ref_h_local_dirs,
+ 	$ref_h_test_remote_dirs
+ 	));
  ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
  can_ok($mirror, "RemoteNotInLocal");
+ ok($mirror->RemoteNotInLocal({}, {}));
  $ref_h_test_remote_files->{"TestD/TestB/TestC/Dir6/test6.txt"} = 1;
  $ref_h_test_remote_dirs->{"TestD/TestB/TestC/Dir6"} = 1;
  ok(my $ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
- 	$ref_h_local_files, $ref_h_test_remote_files));
+ 	$ref_h_local_files,
+ 	$ref_h_test_remote_files
+ 	));
  ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
  ok(my $ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
- 	$ref_h_local_dirs, $ref_h_test_remote_dirs));
+ 	$ref_h_local_dirs,
+ 	$ref_h_test_remote_dirs
+ 	));
  ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
  ok(!$mirror->set_Item());
  ok(!$mirror->get_Item());
@@ -79,8 +85,6 @@ BEGIN { use_ok('Net::MirrorDir') };
  ok(!$mirror->Get_Item());
  ok($mirror->SET____Remotedir("Homepage"));
  ok(!$mirror->WrongFunction());
- ok($mirror->SetDebug(1));
- ok($mirror->GetDelete());
  ok(Net::MirrorDir::SetExclusions($mirror, ["sys"]));
  ok(Net::MirrorDir::GetExclusions($mirror)->[0] eq "sys");
  ok(Net::MirrorDir::SetSubset($mirror, ["my_files"]));
@@ -104,9 +108,6 @@ BEGIN { use_ok('Net::MirrorDir') };
  ok($mirror->SetFtpServer("home.perl.de"));
  ok(my $server = $mirror->GetFtpServer());
  ok($server eq "home.perl.de");
- ok($mirror->SetDelete("disabled"));
- ok(my $delete = $mirror->GetDelete());
- ok($delete eq "disabled");
  ok($mirror->Set_localdir("home"));
  ok(my $localdir = $mirror->GetLocalDir());
  ok($localdir eq "home");
@@ -127,16 +128,24 @@ BEGIN { use_ok('Net::MirrorDir') };
  ok($mirror->GetLocalFiles());
  ok($mirror->GetLocalDirs());
  ok($ref_a_new_local_files = $mirror->LocalNotInRemote(
- 	$mirror->GetLocalFiles(), $ref_h_test_remote_files));
+ 	$mirror->GetLocalFiles(),
+ 	$ref_h_test_remote_files
+ 	));
  ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ref_a_new_local_files->[0]);
  ok($ref_a_new_local_dirs = $mirror->LocalNotInRemote(
- 	$mirror->GetLocalDirs(), $ref_h_test_remote_dirs));
+ 	$mirror->GetLocalDirs(),
+ 	$ref_h_test_remote_dirs
+ 	));
  ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
  ok($ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
- 	$mirror->GetLocalFiles(), $ref_h_test_remote_files));
+ 	$mirror->GetLocalFiles(),
+ 	$ref_h_test_remote_files
+ 	));
  ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
  ok($ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
- 	$mirror->GetLocalDirs(), $ref_h_test_remote_dirs));
+ 	$mirror->GetLocalDirs(),
+ 	$ref_h_test_remote_dirs
+ 	));
  ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
 #-------------------------------------------------
 # tests for "exclusions"
@@ -185,23 +194,50 @@ BEGIN { use_ok('Net::MirrorDir') };
 # PrintFound();
  ok(MyCount() == 2);
 #-------------------------------------------------
-  for(my $i = 1; $i <= 3; $i++)
+# tests with ftp-server
+ SKIP:
  	{
- 	for(keys(%{$mirror}))
- 		{
- 		my $function = "set" . $_;
- 		ok($mirror->$function("ok"));
- 		$function = "GET_" . $_;
- 		ok(my $value = $mirror->$function());
- 		ok($value eq "ok");
- 		$function = "SeT_" . $_;
- 		ok($mirror->$function("nok"));
- 		$function = "gEt" . $_;
- 		ok($value = $mirror->$function());
- 		ok($value eq "nok");
- 		}
- 	}
-#------------------------------------------------
+ 	print(STDERR "\nWould you like to  test the module with a ftp-server?[y|n]: ");
+ 	my $response = <STDIN>;
+ 	skip("no tests with ftp-server\n", 10) if(!($response =~ m/^y/i));
+ 	print(STDERR "\nPlease enter the hostname of the ftp-server: ");
+ 	my $s = <STDIN>;
+ 	chomp($s);
+ 	print(STDERR "\nPlease enter your user name: ");
+ 	my $u = <STDIN>;
+ 	chomp($u);
+ 	print(STDERR "\nPlease enter your password: ");
+ 	my $p = <STDIN>;
+ 	chomp($p);
+	print(STDERR "\nPlease enter the local-directory which is to be compared: ");
+ 	my $l = <STDIN>;
+ 	chomp($l);
+ 	print(STDERR "\nPease enter the remote-directory which is to be compared: ");
+ 	my $r = <STDIN>;
+ 	chomp($r);
+ 	ok(my $m = Net::MirrorDir->new(
+ 		localdir		=> $l,
+ 		remotedir	=> $r,
+ 		ftpserver		=> $s,
+ 		usr		=> $u,
+ 		pass		=> $p, 	
+ 		));
+ 	ok($m->Connect());
+ 	ok($m->IsConnection());
+ 	ok(my ($lf, $ld) = $m->ReadLocalDir());
+ 	ok(my ($rf, $rd) = $m->ReadRemoteDir());
+	ok($m->Quit());
+ 	ok(my $nlf = $m->LocalNotInRemote($lf, $rf));
+ 	ok(my $nld = $m->LocalNotInRemote($ld, $rd));
+ 	ok(my $nrf = $m->RemoteNotInLocal($lf, $rf));
+ 	ok(my $nrd = $m->RemoteNotInLocal($ld, $rd));
+ 	print(STDERR "\n");
+ 	print(STDERR "new local file: $_\n") for(@{$nlf});
+ 	print(STDERR "new local dir: $_\n") for(@{$nld});
+ 	print(STDERR "new remote file: $_\n") for(@{$nrf});
+ 	print(STDERR "new remote dir: $_\n") for(@{$nrd});	    
+ 	};
+#-------------------------------------------------
  sub MyCount
  	{
  	#my $count = 0;
@@ -216,6 +252,7 @@ BEGIN { use_ok('Net::MirrorDir') };
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
 
 
 
