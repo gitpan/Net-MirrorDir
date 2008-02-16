@@ -30,7 +30,7 @@
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.09';
+ $Net::MirrorDir::VERSION = '0.10';
 #-------------------------------------------------
  sub new
  	{
@@ -128,12 +128,10 @@
  				}
  			return($self->{_localfiles}, $self->{_localdirs});
  			}
- 		if(-d $p)
+ 		elsif(-d $p)
  			{
  			$self->{_localdirs}{$p} = 1;
- 			opendir(PATH, $p) or
- 				die("error in opendir $p : 
- 				at Net::MirrorDir::ReadLocalDir() : $!\n");
+ 			opendir(PATH, $p) or die("error in opendir $p $!\n");
  			my @files = grep { $_ ne '.' and $_ ne '..' } readdir(PATH);
  			closedir(PATH);
  			for my $file (@files)
@@ -158,7 +156,7 @@
  	$self->{_readremotedir} = sub 
  		{
  		my ($self, $p) = @_;
- 		if(defined($self->{_connection}->size($p)))
+ 		if($self->{_connection}->size($p))
  			{
  			if(!@{$self->{_regex_subset}})
  				{
@@ -175,11 +173,9 @@
  				}
  			return($self->{_remotefiles}, $self->{_remotedirs});
  			}
- 		if($self->{_connection}->cwd($p))
+ 		elsif(my @files = $self->{_connection}->ls($p))
  			{
- 			$self->{_connection}->cwd();
  			$self->{_remotedirs}{$p} = 1;
- 			my @files = $self->{_connection}->ls($p);
 			for my $file (@files)
  				{
  				next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
@@ -526,6 +522,8 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
+
 
 
 

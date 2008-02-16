@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.10 Thu Feb 14 20:46:05 2008 
+ 	- improvement of function ReadRemoteDir()
+
 0.09 Sat Feb  2 17:23:57 2008 
  	- insert function IsConnection()
  	- insert bindings for attribute
@@ -34,6 +37,8 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
+
 
 
 
