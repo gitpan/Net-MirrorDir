@@ -30,7 +30,7 @@
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.10';
+ $Net::MirrorDir::VERSION = '0.11';
 #-------------------------------------------------
  sub new
  	{
@@ -90,9 +90,7 @@
 #-------------------------------------------------
  sub IsConnection
  	{
- 	my $dir;
- 	eval { $dir = $_[0]->{_connection}->pwd(); };
- 	return($dir);
+ 	return(eval { $_[0]->{_connection}->pwd(); });
  	}
 #-------------------------------------------------
  sub Quit
@@ -149,8 +147,11 @@
 #-------------------------------------------------
  sub ReadRemoteDir
  	{
- 	my ($self, $path) = @_;
- 	return({}, {}) if(!$self->IsConnection());
+ 	my ($self, $dir) = @_;
+ 	my $d = $dir || $self->{_remotedir};
+ 	return({}, {}) unless($self->IsConnection() && $d);
+ 	return({}, {}) unless(eval { $self->{_connection}->cwd($d) || $self->{_connection}->size($d); });
+ 	$self->{_connection}->cwd();
  	$self->{_remotefiles} = {};
  	$self->{_remotedirs} = {};
  	$self->{_readremotedir} = sub 
@@ -186,35 +187,35 @@
  		warn("$p is neither a file nor a directory\n");
 		return($self->{_remotefiles}, $self->{_remotedirs});
  		};
- 	return($self->{_readremotedir}->($self, ($path or $self->{_remotedir})));
+ 	return($self->{_readremotedir}->($self, $d));
  	}
 #-------------------------------------------------
  sub LocalNotInRemote
  	{
- 	my ($self, $ref_h_local_paths, $ref_h_remote_paths) = @_;
- 	my @files = ();
- 	my $r_path;
- 	for(keys(%{$ref_h_local_paths}))
+ 	my ($self, $rh_lp, $rh_rp) = @_;
+ 	my @lnir = ();
+ 	my $rp;
+ 	for my $lp (keys(%{$rh_lp}))
  		{
- 		$r_path = $_;
- 		$r_path =~ s!$self->{_regex_localdir}!$self->{_remotedir}!;
- 		push(@files, $_) if(!(defined($ref_h_remote_paths->{$r_path})));
+ 		$rp = $lp;
+ 		$rp =~ s!$self->{_regex_localdir}!$self->{_remotedir}!;
+ 		push(@lnir, $lp) unless(defined($rh_rp->{$rp}));
  		}
- 	return(\@files);
+ 	return(\@lnir);
  	}
 #-------------------------------------------------
  sub RemoteNotInLocal
  	{
- 	my ($self, $ref_h_local_paths, $ref_h_remote_paths) = @_;
- 	my @files = ();
- 	my $l_path;
- 	for(keys(%{$ref_h_remote_paths}))
+ 	my ($self, $rh_lp, $rh_rp) = @_;
+ 	my @rnil = ();
+ 	my $lp;
+ 	for my $rp (keys(%{$rh_rp}))
  		{
- 		$l_path = $_;
- 		$l_path =~ s!$self->{_regex_remotedir}!$self->{_localdir}!;
- 		push(@files, $_) if(!(defined($ref_h_local_paths->{$l_path})));
+ 		$lp = $rp;
+ 		$lp =~ s!$self->{_regex_remotedir}!$self->{_localdir}!;
+ 		push(@rnil, $rp) unless(defined($rh_lp->{$lp}));
  		}
- 	return(\@files);
+ 	return(\@rnil);
  	}
 #-------------------------------------------------
  sub AUTOLOAD
@@ -522,6 +523,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 

@@ -21,18 +21,23 @@
  	pass		=> "xyz", 	
  	);
  isa_ok($mirror, "Net::MirrorDir");
+#-------------------------------------------------
+# tests for methods
  can_ok($mirror, "_Init");
  ok(!$mirror->_Init());
  can_ok($mirror, "Connect");
  can_ok($mirror, "IsConnection");
  can_ok($mirror, "Quit");
  ok($mirror->Quit());
+#-------------------------------------------------
+# tests for ReadLocalDir()
  can_ok($mirror, "ReadLocalDir");
- ok(my ($ref_h_local_files, $ref_h_local_dirs) = $mirror->ReadLocalDir());
- warn("files : $_\n") for(sort keys(%{$ref_h_local_files}));
- warn("dirs : $_\n") for(sort keys(%{$ref_h_local_dirs}));
+ ok(my ($rh_lf, $rh_ld) = $mirror->ReadLocalDir());
+ warn("local files : $_\n") for(sort keys(%{$rh_lf}));
+ warn("local dirs : $_\n") for(sort keys(%{$rh_ld}));
+#-------------------------------------------------
  can_ok($mirror, "ReadRemoteDir");
- my $ref_h_test_remote_files =
+ my $rh_test_rf =
  	{
 	"TestD/TestB/TestC/Dir1/test1.txt"		=> 1,
  	"TestD/TestB/TestC/Dir2/test2.txt"		=> 1,
@@ -42,7 +47,7 @@
  	"TestD/TestB/TestC/Dir4/test4.exclusions"	=> 1,
  	"TestD/TestB/TestC/Dir5/test5.txt"		=> 1,
  	};
- my $ref_h_test_remote_dirs =
+ my $rh_test_rd =
  	{
  	"TestD"			=> 1,
  	"TestD/TestB"		=> 1,
@@ -53,32 +58,39 @@
  	"TestD/TestB/TestC/Dir4" 	=> 1,
  	"TestD/TestB/TestC/Dir5"	=> 1,
  	};
+#-------------------------------------------------
+# tests for compare files or directories
  can_ok($mirror, "LocalNotInRemote");
  ok($mirror->LocalNotInRemote({}, {}));
- ok(my $ref_a_new_local_files = $mirror->LocalNotInRemote(
- 	$ref_h_local_files,
- 	$ref_h_test_remote_files
- 	));
- ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ref_a_new_local_files->[0]);
- ok(my $ref_a_new_local_dirs = $mirror->LocalNotInRemote(
- 	$ref_h_local_dirs,
- 	$ref_h_test_remote_dirs
- 	));
- ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
+ ok(my $ra_lfnir = $mirror->LocalNotInRemote($rh_lf, $rh_test_rf));
+ ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ra_lfnir->[0]);
+ ok(my $ra_ldnir = $mirror->LocalNotInRemote($rh_ld, $rh_test_rd));
+ ok("TestA/TestB/TestC/Dir3" eq $ra_ldnir->[0]);
  can_ok($mirror, "RemoteNotInLocal");
  ok($mirror->RemoteNotInLocal({}, {}));
- $ref_h_test_remote_files->{"TestD/TestB/TestC/Dir6/test6.txt"} = 1;
- $ref_h_test_remote_dirs->{"TestD/TestB/TestC/Dir6"} = 1;
- ok(my $ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
- 	$ref_h_local_files,
- 	$ref_h_test_remote_files
- 	));
- ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
- ok(my $ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
- 	$ref_h_local_dirs,
- 	$ref_h_test_remote_dirs
- 	));
- ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
+ $rh_test_rf->{"TestD/TestB/TestC/Dir6/test6.txt"} = 1;
+ $rh_test_rd->{"TestD/TestB/TestC/Dir6"} = 1;
+ ok(my $ra_rfnil = $mirror->RemoteNotInLocal($rh_lf, $rh_test_rf));
+ ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ra_rfnil->[0]);
+ ok(my $ra_rdnil = $mirror->RemoteNotInLocal($rh_ld, $rh_test_rd));
+ ok("TestD/TestB/TestC/Dir6" eq $ra_rdnil->[0]);
+ ok($mirror->SetExclusions([]));
+ ok($mirror->SetSubset([]));
+ ok($mirror->ReadLocalDir("TestA"));
+ ok($mirror->SetRemoteDir("TestD"));
+ ok($mirror->SetLocalDir("TestA"));
+ ok($mirror->GetLocalFiles());
+ ok($mirror->GetLocalDirs());
+ ok($ra_lfnir = $mirror->LocalNotInRemote($mirror->GetLocalFiles(), $rh_test_rf));
+ ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ra_lfnir->[0]);
+ ok($ra_ldnir = $mirror->LocalNotInRemote($mirror->GetLocalDirs(), $rh_test_rd));
+ ok("TestA/TestB/TestC/Dir3" eq $ra_ldnir->[0]);
+ ok($ra_rfnil = $mirror->RemoteNotInLocal($mirror->GetLocalFiles(), $rh_test_rf));
+ ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ra_rfnil->[0]);
+ ok($ra_rdnil = $mirror->RemoteNotInLocal($mirror->GetLocalDirs(), $rh_test_rd));
+ ok("TestD/TestB/TestC/Dir6" eq $ra_rdnil->[0]);
+#-------------------------------------------------
+# tests for set and get
  ok(!$mirror->set_Item());
  ok(!$mirror->get_Item());
  ok(!$mirror->GETItem());
@@ -90,21 +102,6 @@
  ok(Net::MirrorDir::SetSubset($mirror, ["my_files"]));
  ok(Net::MirrorDir::GetSubset($mirror)->[0] eq "my_files");
  ok(Net::MirrorDir::SetSubset($mirror, []));
-#-------------------------------------------------
-# tests for add
- ok(Net::MirrorDir::SetExclusions($mirror, []));
- ok(Net::MirrorDir::SetSubset($mirror, []));
- my $count = 0;
- for(A..Z)
- 	{
- 	ok($mirror->add_exclusions($_));
- 	ok($mirror->add_subset($_));
- 	ok($#{$mirror->get_exclusions()} == $count);
- 	ok($#{$mirror->get_subset()} == $count++);
- 	}
- ok(!$mirror->add_timeout(30));
- ok(!$mirror->add_wrong("txt"));
-#-------------------------------------------------
  ok($mirror->SetFtpServer("home.perl.de"));
  ok(my $server = $mirror->GetFtpServer());
  ok($server eq "home.perl.de");
@@ -119,34 +116,19 @@
  ok($ftpserver eq "ftp.net.de");
  ok($mirror->set_usr("myself"));
 #-------------------------------------------------
-# tests for ReadLocalDir()
- ok($mirror->SetExclusions([]));
- ok($mirror->SetSubset([]));
- ok($mirror->ReadLocalDir("TestA"));
- ok($mirror->SetRemoteDir("TestD"));
- ok($mirror->SetLocalDir("TestA"));
- ok($mirror->GetLocalFiles());
- ok($mirror->GetLocalDirs());
- ok($ref_a_new_local_files = $mirror->LocalNotInRemote(
- 	$mirror->GetLocalFiles(),
- 	$ref_h_test_remote_files
- 	));
- ok("TestA/TestB/TestC/Dir3/test3.txt" eq $ref_a_new_local_files->[0]);
- ok($ref_a_new_local_dirs = $mirror->LocalNotInRemote(
- 	$mirror->GetLocalDirs(),
- 	$ref_h_test_remote_dirs
- 	));
- ok("TestA/TestB/TestC/Dir3" eq $ref_a_new_local_dirs->[0]);
- ok($ref_a_deleted_local_files = $mirror->RemoteNotInLocal(
- 	$mirror->GetLocalFiles(),
- 	$ref_h_test_remote_files
- 	));
- ok("TestD/TestB/TestC/Dir6/test6.txt" eq $ref_a_deleted_local_files->[0]);
- ok($ref_a_deleted_local_dirs = $mirror->RemoteNotInLocal(
- 	$mirror->GetLocalDirs(),
- 	$ref_h_test_remote_dirs
- 	));
- ok("TestD/TestB/TestC/Dir6" eq $ref_a_deleted_local_dirs->[0]);
+# tests for add
+ ok(Net::MirrorDir::SetExclusions($mirror, []));
+ ok(Net::MirrorDir::SetSubset($mirror, []));
+ my $count = 0;
+ for(A..Z)
+ 	{
+ 	ok($mirror->add_exclusions($_));
+ 	ok($mirror->add_subset($_));
+ 	ok($#{$mirror->get_exclusions()} == $count);
+ 	ok($#{$mirror->get_subset()} == $count++);
+ 	}
+ ok(!$mirror->add_timeout(30));
+ ok(!$mirror->add_wrong("txt"));
 #-------------------------------------------------
 # tests for "exclusions"
  ok($mirror->SetLocalDir("TestA"));
@@ -224,18 +206,18 @@
  		));
  	ok($m->Connect());
  	ok($m->IsConnection());
- 	ok(my ($lf, $ld) = $m->ReadLocalDir());
- 	ok(my ($rf, $rd) = $m->ReadRemoteDir());
+ 	ok(my ($rh_lf, $rh_ld) = $m->ReadLocalDir());
+ 	ok(my ($rh_rf, $rh_rd) = $m->ReadRemoteDir());
 	ok($m->Quit());
- 	ok(my $nlf = $m->LocalNotInRemote($lf, $rf));
- 	ok(my $nld = $m->LocalNotInRemote($ld, $rd));
- 	ok(my $nrf = $m->RemoteNotInLocal($lf, $rf));
- 	ok(my $nrd = $m->RemoteNotInLocal($ld, $rd));
+ 	ok(my $ra_lfnir = $m->LocalNotInRemote($rh_lf, $rh_rf));
+ 	ok(my $ra_ldnir = $m->LocalNotInRemote($rh_ld, $rh_rd));
+ 	ok(my $ra_rfnil = $m->RemoteNotInLocal($rh_lf, $rh_rf));
+ 	ok(my $ra_rdnil = $m->RemoteNotInLocal($rh_ld, $rh_rd));
  	print(STDERR "\n");
- 	print(STDERR "new local file: $_\n") for(@{$nlf});
- 	print(STDERR "new local dir: $_\n") for(@{$nld});
- 	print(STDERR "new remote file: $_\n") for(@{$nrf});
- 	print(STDERR "new remote dir: $_\n") for(@{$nrd});	    
+ 	print(STDERR "local file not in remote: $_\n") for(@{$ra_lfnir});
+ 	print(STDERR "local dir not in remote: $_\n") for(@{$ra_ldnir});
+ 	print(STDERR "remote file not in local: $_\n") for(@{$ra_rfnil});
+ 	print(STDERR "remote dir not in local: $_\n") for(@{$ra_rdnil});	    
  	};
 #-------------------------------------------------
  sub MyCount
@@ -252,6 +234,7 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
 
 
 
