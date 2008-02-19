@@ -30,7 +30,7 @@
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.11';
+ $Net::MirrorDir::VERSION = '0.12';
 #-------------------------------------------------
  sub new
  	{
@@ -174,18 +174,16 @@
  				}
  			return($self->{_remotefiles}, $self->{_remotedirs});
  			}
- 		elsif(my @files = $self->{_connection}->ls($p))
+ 		else
  			{
  			$self->{_remotedirs}{$p} = 1;
-			for my $file (@files)
+			for my $file ($self->{_connection}->ls($p))
  				{
  				next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
  				$self->{_readremotedir}->($self, "$p/$file");
  				}
  			return($self->{_remotefiles}, $self->{_remotedirs});
  			}
- 		warn("$p is neither a file nor a directory\n");
-		return($self->{_remotefiles}, $self->{_remotedirs});
  		};
  	return($self->{_readremotedir}->($self, $d));
  	}
@@ -523,6 +521,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 

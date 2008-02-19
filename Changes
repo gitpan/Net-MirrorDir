@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.12 Tue Feb 19 19:04:36 2008 
+ 	- changes in function ReadRemoteDir()
+
 0.11 Sun Feb 17 13:26:45 2008 
  	- add arg-check for ReadRemoteDir()
 
@@ -40,6 +43,7 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
 
 
 
