@@ -30,7 +30,7 @@
  use Net::FTP;
  use vars '$AUTOLOAD';
 #-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.12';
+ $Net::MirrorDir::VERSION = '0.13';
 #-------------------------------------------------
  sub new
  	{
@@ -157,7 +157,7 @@
  	$self->{_readremotedir} = sub 
  		{
  		my ($self, $p) = @_;
- 		if($self->{_connection}->size($p))
+ 		if(defined($self->{_connection}->size($p)))
  			{
  			if(!@{$self->{_regex_subset}})
  				{
@@ -521,6 +521,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 

@@ -1,7 +1,14 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.13 Wed Feb 20 19:36:06 2008 
+ 	- changes in function ReadRemoteDir()
+	if($self->{_connection}->size($p))
+ 	will not work correctly with files, of zero bytes size
+
 0.12 Tue Feb 19 19:04:36 2008 
  	- changes in function ReadRemoteDir()
+	elsif(my @files =  $self->{_connection}->ls($p))
+ 	will not work correctly with empty directories
 
 0.11 Sun Feb 17 13:26:45 2008 
  	- add arg-check for ReadRemoteDir()
@@ -43,6 +50,7 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
 
 
 
