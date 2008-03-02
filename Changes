@@ -1,9 +1,17 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.14 Sat Feb 23 10:36:50 2008 
+ 	- using the function "$self->{_connection}->dir($dir)" to the search of the directory
+ 	the FTP-server should return the following format as response of the LIST command:
+ 	-r--r--r--   1 ftpuser  ftpusers       576 Feb 23 09:23 file.txt
+	drwxrwxr-x   2 ftpuser  ftpusers       512 Feb 21 13:54 Dir1
+ 	Directory- or filenames should not contain any white space.
+ 	- add some tests
+
 0.13 Wed Feb 20 19:36:06 2008 
  	- changes in function ReadRemoteDir()
 	if($self->{_connection}->size($p))
- 	will not work correctly with files, of zero bytes size
+ 	will not work correctly with files, of zero byte size
 
 0.12 Tue Feb 19 19:04:36 2008 
  	- changes in function ReadRemoteDir()
@@ -50,6 +58,9 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
+
+
 
 
 

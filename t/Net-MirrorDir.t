@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 218;
+ use Test::More tests => 230;
 # use Test::More "no_plan";
  BEGIN { use_ok('Net::MirrorDir') };
 
@@ -49,7 +49,6 @@
  	};
  my $rh_test_rd =
  	{
- 	"TestD"			=> 1,
  	"TestD/TestB"		=> 1,
  	"TestD/TestB/TestC"	=> 1,
  	"TestD/TestB/TestC/Dir1"	=> 1,
@@ -179,9 +178,43 @@
 # tests with ftp-server
  SKIP:
  	{
+ 	my $m = Net::MirrorDir->new(
+ 		localdir		=> 'TestA',
+ 		remotedir	=> '/authors/id/K/KN/KNORR/Remote/TestA',
+ 		ftpserver		=> 'www.cpan.org',
+ 		usr		=> 'anonymous',
+ 		pass		=> 'create-soft@tiscali.de', 	
+ 		exclusions	=> ['CHECKSUMS']
+ 		);
+ 	skip("no tests with www.cpan.org\n", 12) unless($m->Connect());
+ 	ok($m->IsConnection());
+ 	ok(my ($rh_rf, $rh_rd) = $m->ReadRemoteDir());
+	ok($m->Quit());
+ 	warn("remote files: $_\n") for(sort keys %{$rh_rf});
+ 	warn("remote dirs: $_\n") for(sort keys %{$rh_rd});
+ 	ok(($rh_lf, $rh_ld) = $m->ReadLocalDir());
+ 	warn("local files: $_\n") for(sort keys %{$rh_lf});
+ 	warn("local dirs: $_\n") for(sort keys %{$rh_ld});
+ 	ok($ra_lfnir = $m->LocalNotInRemote($rh_lf, $rh_rf));
+ 	ok($ra_ldnir = $m->LocalNotInRemote($rh_ld, $rh_rd));
+ 	ok($ra_rfnil = $m->RemoteNotInLocal($rh_lf, $rh_rf));
+ 	ok($ra_rdnil = $m->RemoteNotInLocal($rh_ld, $rh_rd));
+ 	warn("\n");
+ 	warn("local file not in remote: $_\n") for(@{$ra_lfnir});
+ 	warn("local dir not in remote: $_\n") for(@{$ra_ldnir});
+ 	warn("remote file not in local: $_\n") for(@{$ra_rfnil});
+ 	warn("remtoe dir not in local: $_\n") for(@{$ra_rdnil});
+ 	ok(@{$ra_lfnir} == 0);
+ 	ok(@{$ra_ldnir} == 0);
+ 	ok(@{$ra_rfnil} == 0);
+ 	ok(@{$ra_rdnil} == 0);
+ 	}
+#-------------------------------------------------
+ SKIP:
+ 	{
  	print(STDERR "\nWould you like to  test the module with a ftp-server?[y|n]: ");
  	my $response = <STDIN>;
- 	skip("no tests with ftp-server\n", 10) if(!($response =~ m/^y/i));
+ 	skip("no tests with ftp-server\n", 10) unless($response =~ m/^y/i);
  	print(STDERR "\nPlease enter the hostname of the ftp-server: ");
  	my $s = <STDIN>;
  	chomp($s);
@@ -197,7 +230,7 @@
  	print(STDERR "\nPease enter the remote-directory which is to be compared: ");
  	my $r = <STDIN>;
  	chomp($r);
- 	ok(my $m = Net::MirrorDir->new(
+ 	ok($m = Net::MirrorDir->new(
  		localdir		=> $l,
  		remotedir	=> $r,
  		ftpserver		=> $s,
@@ -206,19 +239,19 @@
  		));
  	ok($m->Connect());
  	ok($m->IsConnection());
- 	ok(my ($rh_lf, $rh_ld) = $m->ReadLocalDir());
- 	ok(my ($rh_rf, $rh_rd) = $m->ReadRemoteDir());
+ 	ok(($rh_lf, $rh_ld) = $m->ReadLocalDir());
+ 	ok(($rh_rf, $rh_rd) = $m->ReadRemoteDir());
 	ok($m->Quit());
- 	ok(my $ra_lfnir = $m->LocalNotInRemote($rh_lf, $rh_rf));
- 	ok(my $ra_ldnir = $m->LocalNotInRemote($rh_ld, $rh_rd));
- 	ok(my $ra_rfnil = $m->RemoteNotInLocal($rh_lf, $rh_rf));
- 	ok(my $ra_rdnil = $m->RemoteNotInLocal($rh_ld, $rh_rd));
- 	print(STDERR "\n");
- 	print(STDERR "local file not in remote: $_\n") for(@{$ra_lfnir});
- 	print(STDERR "local dir not in remote: $_\n") for(@{$ra_ldnir});
- 	print(STDERR "remote file not in local: $_\n") for(@{$ra_rfnil});
- 	print(STDERR "remote dir not in local: $_\n") for(@{$ra_rdnil});	    
- 	};
+ 	ok($ra_lfnir = $m->LocalNotInRemote($rh_lf, $rh_rf));
+ 	ok($ra_ldnir = $m->LocalNotInRemote($rh_ld, $rh_rd));
+ 	ok($ra_rfnil = $m->RemoteNotInLocal($rh_lf, $rh_rf));
+ 	ok($ra_rdnil = $m->RemoteNotInLocal($rh_ld, $rh_rd));
+ 	warn("\n");
+ 	warn("local file not in remote: $_\n") for(@{$ra_lfnir});
+ 	warn("local dir not in remote: $_\n") for(@{$ra_ldnir});
+ 	warn("remote file not in local: $_\n") for(@{$ra_rfnil});
+ 	warn("remote dir not in local: $_\n") for(@{$ra_rdnil});	    
+ 	}
 #-------------------------------------------------
  sub MyCount
  	{
@@ -234,6 +267,8 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
+
 
 
 

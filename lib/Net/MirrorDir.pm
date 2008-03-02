@@ -26,11 +26,9 @@
  sub FETCH { return(${$_[0]}->{_subset}); }
 #-------------------------------------------------
  package Net::MirrorDir;
-#-------------------------------------------------
  use Net::FTP;
  use vars '$AUTOLOAD';
-#-------------------------------------------------
- $Net::MirrorDir::VERSION = '0.13';
+ $Net::MirrorDir::VERSION = '0.14';
 #-------------------------------------------------
  sub new
  	{
@@ -50,7 +48,7 @@
  	tie($self->{_exclusions},	"Net::MirrorDir::Exclusions", $self);
  	tie($self->{_subset},	"Net::MirrorDir::Subset", $self);
  	$self->{_localdir}		= $arg{localdir}	|| '.';
- 	$self->{_remotedir}	= $arg{remotedir}	|| '/';
+ 	$self->{_remotedir}	= $arg{remotedir}	|| '';
  	$self->{_exclusions}	= $arg{exclusions}	|| [];
  	$self->{_subset}		= $arg{subset}	|| [];
 	$self->_Init(%arg) if(__PACKAGE__ ne ref($self));
@@ -82,6 +80,7 @@
  			{
  			$self->{_connection}->quit();
  			$self->{_connection} = undef;
+ 			print("\nerror in login\n") if($self->{_debug});
  			return(0);
  			}
  		return(1);
@@ -103,7 +102,9 @@
 #-------------------------------------------------
  sub ReadLocalDir
  	{ 
- 	my ($self, $path) = @_;
+ 	my ($self, $dir) = @_;
+ 	$dir ||= $self->{_localdir};
+ 	return({}, {}) unless(-d $dir);
  	$self->{_localfiles} = {};
  	$self->{_localdirs} = {};
  	$self->{_readlocaldir} = sub
@@ -142,50 +143,73 @@
  		warn("$p is neither a file nor a directory\n");
 		return($self->{_localfiles}, $self->{_localdirs});
  		};
- 	return($self->{_readlocaldir}->($self, ($path or $self->{_localdir})));
+ 	opendir(PATH, $dir) or die("error in opendir $dir $!\n");
+ 		my @files = grep { $_ ne '.' and $_ ne '..' } readdir(PATH);
+ 	closedir(PATH);
+	for my $file (@files)
+ 		{
+ 		next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
+ 		$self->{_readlocaldir}->($self, "$dir/$file");
+ 		}
+ 	return($self->{_localfiles}, $self->{_localdirs});
  	}
 #-------------------------------------------------
  sub ReadRemoteDir
  	{
  	my ($self, $dir) = @_;
- 	my $d = $dir || $self->{_remotedir};
- 	return({}, {}) unless($self->IsConnection() && $d);
- 	return({}, {}) unless(eval { $self->{_connection}->cwd($d) || $self->{_connection}->size($d); });
+ 	$dir ||= $self->{_remotedir};
+ 	return({}, {}) 
+ 		unless(
+ 			$self->IsConnection()
+ 			&& 
+ 			eval { $self->{_connection}->cwd($dir); }
+ 			);
  	$self->{_connection}->cwd();
  	$self->{_remotefiles} = {};
  	$self->{_remotedirs} = {};
  	$self->{_readremotedir} = sub 
  		{
  		my ($self, $p) = @_;
- 		if(defined($self->{_connection}->size($p)))
+ 		my (@info, $name, $np);
+ 		my @lines = $self->{_connection}->dir($p);
+ 		if($self->{_debug})
  			{
- 			if(!@{$self->{_regex_subset}})
+ 			print("\nreturnvalues from <dir($p)>\n");
+ 			print("$_\n") for(@lines);
+ 			}
+ 		for my $line (@lines)
+ 			{
+			@info = split(/\s+/, $line);
+ 			$name = $info[$#info];
+ 			next if($name eq '.' || $name eq '..');
+ 			$np = "$p/$name";
+			next if(grep { $np =~ $_ } @{$self->{_regex_exclusions}});
+ 			if($line =~ m/^-/)
  				{
- 				$self->{_remotefiles}{$p} = 1;
- 				return($self->{_remotefiles}, $self->{_remotedirs});
- 				}
- 			for(@{$self->{_regex_subset}})
- 				{
- 				if($p =~ $_)
+ 				$self->{_remotefiles}{$np} = 1
+ 					unless(@{$self->{_regex_subset}});
+ 				for(@{$self->{_regex_subset}})
  					{
- 					$self->{_remotefiles}{$p} = 1;
- 					last;
+ 					if($np =~ $_)
+ 						{
+ 						$self->{_remotefiles}{$np} = 1;
+ 						last;
+ 						}
  					}
  				}
- 			return($self->{_remotefiles}, $self->{_remotedirs});
- 			}
- 		else
- 			{
- 			$self->{_remotedirs}{$p} = 1;
-			for my $file ($self->{_connection}->ls($p))
+ 			elsif($line =~ m/^d/)
  				{
- 				next if(grep { $file =~ $_ } @{$self->{_regex_exclusions}});
- 				$self->{_readremotedir}->($self, "$p/$file");
+ 				$self->{_remotedirs}{$np} = 1;
+ 				$self->{_readremotedir}->($self, $np);
  				}
- 			return($self->{_remotefiles}, $self->{_remotedirs});
+ 			else
+ 				{
+ 				warn("error can not get info: $line\n");
+ 				}
  			}
+		return($self->{_remotefiles}, $self->{_remotedirs});
  		};
- 	return($self->{_readremotedir}->($self, $d));
+ 	return($self->{_readremotedir}->($self, $dir));
  	}
 #-------------------------------------------------
  sub LocalNotInRemote
@@ -521,6 +545,15 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
+
+
+
+
+
+
+
+
 
 
 
