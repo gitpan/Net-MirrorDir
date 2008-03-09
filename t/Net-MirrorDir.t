@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 230;
+ use Test::More tests => 238;
 # use Test::More "no_plan";
  BEGIN { use_ok('Net::MirrorDir') };
 
@@ -115,6 +115,20 @@
  ok($ftpserver eq "ftp.net.de");
  ok($mirror->set_usr("myself"));
 #-------------------------------------------------
+# tests with wrong values
+ ok($mirror->SetLocalDir());
+ ok($mirror->GetLocalDir() eq '.');
+ ok($mirror->SetRemoteDir());
+ ok($mirror->GetRemoteDir() eq '');
+ ok($mirror->SetExclusions());
+# will not intercept
+# ok($mirror->SetExlusions("wrong_value"));	
+ ok($mirror->AddExclusions(".sys"));
+ ok($mirror->SetSubset());
+# will not intercept 
+# ok($mirror->SetSubset("wrong_value"));
+ ok($mirror->AddSubset(".jpg"));
+#-------------------------------------------------
 # tests for add
  ok(Net::MirrorDir::SetExclusions($mirror, []));
  ok(Net::MirrorDir::SetSubset($mirror, []));
@@ -212,22 +226,24 @@
 #-------------------------------------------------
  SKIP:
  	{
- 	print(STDERR "\nWould you like to  test the module with a ftp-server?[y|n]: ");
+ 	my $oldfh = select(STDERR);
+ 	$| = 1;
+ 	print("\nWould you like to  test the module with a ftp-server?[y|n]: ");
  	my $response = <STDIN>;
  	skip("no tests with ftp-server\n", 10) unless($response =~ m/^y/i);
- 	print(STDERR "\nPlease enter the hostname of the ftp-server: ");
+ 	print("\nPlease enter the hostname of the ftp-server: ");
  	my $s = <STDIN>;
  	chomp($s);
- 	print(STDERR "\nPlease enter your user name: ");
+ 	print("\nPlease enter your user name: ");
  	my $u = <STDIN>;
  	chomp($u);
- 	print(STDERR "\nPlease enter your password: ");
+ 	print("\nPlease enter your password: ");
  	my $p = <STDIN>;
  	chomp($p);
-	print(STDERR "\nPlease enter the local-directory which is to be compared: ");
+	print("\nPlease enter the local-directory which is to be compared: ");
  	my $l = <STDIN>;
  	chomp($l);
- 	print(STDERR "\nPease enter the remote-directory which is to be compared: ");
+ 	print("\nPease enter the remote-directory which is to be compared: ");
  	my $r = <STDIN>;
  	chomp($r);
  	ok($m = Net::MirrorDir->new(
@@ -246,11 +262,12 @@
  	ok($ra_ldnir = $m->LocalNotInRemote($rh_ld, $rh_rd));
  	ok($ra_rfnil = $m->RemoteNotInLocal($rh_lf, $rh_rf));
  	ok($ra_rdnil = $m->RemoteNotInLocal($rh_ld, $rh_rd));
- 	warn("\n");
- 	warn("local file not in remote: $_\n") for(@{$ra_lfnir});
- 	warn("local dir not in remote: $_\n") for(@{$ra_ldnir});
- 	warn("remote file not in local: $_\n") for(@{$ra_rfnil});
- 	warn("remote dir not in local: $_\n") for(@{$ra_rdnil});	    
+ 	print("\n");
+ 	print("local file not in remote: $_\n") for(@{$ra_lfnir});
+ 	print("local dir not in remote: $_\n") for(@{$ra_ldnir});
+ 	print("remote file not in local: $_\n") for(@{$ra_rfnil});
+ 	print("remote dir not in local: $_\n") for(@{$ra_rdnil});	    
+ 	select($oldfh);
  	}
 #-------------------------------------------------
  sub MyCount
@@ -267,6 +284,7 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
 
 
 

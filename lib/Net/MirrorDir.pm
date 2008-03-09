@@ -7,12 +7,12 @@
 #-------------------------------------------------
  package Net::MirrorDir::LocalDir;
  sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
- sub STORE { ${$_[0]}->{_regex_localdir} = qr!^\Q$_[1]\E!; }
+ sub STORE { $_[1] ||= '.'; ${$_[0]}->{_regex_localdir} = qr!^\Q$_[1]\E!; }
  sub FETCH { return(${$_[0]}->{_localdir}); }
 #-------------------------------------------------
  package Net::MirrorDir::RemoteDir;
  sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
- sub STORE { ${$_[0]}->{_regex_remotedir} = qr!^\Q$_[1]\E!; }
+ sub STORE { $_[1] ||= ''; ${$_[0]}->{_regex_remotedir} = qr!^\Q$_[1]\E!; }
  sub FETCH { return(${$_[0]}->{_remotedir}); }
 #-------------------------------------------------
  package Net::MirrorDir::Exclusions;
@@ -28,7 +28,7 @@
  package Net::MirrorDir;
  use Net::FTP;
  use vars '$AUTOLOAD';
- $Net::MirrorDir::VERSION = '0.14';
+ $Net::MirrorDir::VERSION = '0.15';
 #-------------------------------------------------
  sub new
  	{
@@ -170,14 +170,16 @@
  	$self->{_readremotedir} = sub 
  		{
  		my ($self, $p) = @_;
- 		my (@info, $name, $np);
- 		my @lines = $self->{_connection}->dir($p);
+ 		my (@info, $name, $np, $ra_lines);
+ 		my $count = 0;
+ 		$self->{_connection}->abort()
+ 			until($ra_lines = $self->{_connection}->dir($p) || ++$count > 3);
  		if($self->{_debug})
  			{
  			print("\nreturnvalues from <dir($p)>\n");
- 			print("$_\n") for(@lines);
+ 			print("$_\n") for(@{$ra_lines});
  			}
- 		for my $line (@lines)
+ 		for my $line (@{$ra_lines})
  			{
 			@info = split(/\s+/, $line);
  			$name = $info[$#info];
@@ -545,6 +547,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 
