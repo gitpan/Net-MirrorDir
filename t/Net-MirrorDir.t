@@ -226,6 +226,7 @@
 #-------------------------------------------------
  SKIP:
  	{
+ 	skip("no tests with user prompt\n", 10) if($ENV{AUTOMATED_TESTING});
  	my $oldfh = select(STDERR);
  	$| = 1;
  	print("\nWould you like to  test the module with a ftp-server?[y|n]: ");
@@ -284,6 +285,7 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
 
 
 

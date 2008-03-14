@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::MirrorDir.
 
+0.16 Fri Mar 14 18:09:22 2008 
+ 	- skip tests with user prompt, if $ENV{AUTOMATED_TESTING} is true
+
 0.15 Sun Mar  9 10:29:55 2008 
  	- Time-outs of the connection are caught.
  	- add some tests
@@ -62,6 +65,7 @@ Revision history for Perl extension Net::MirrorDir.
 0.01  Thu Jan  5 12:01:41 2006
 	- original version; created by h2xs 1.23 with options
 		-XAn Net::MirrorDir
+
 
 
 
