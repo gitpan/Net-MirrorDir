@@ -28,7 +28,7 @@
  package Net::MirrorDir;
  use Net::FTP;
  use vars '$AUTOLOAD';
- $Net::MirrorDir::VERSION = '0.16';
+ $Net::MirrorDir::VERSION = '0.17';
 #-------------------------------------------------
  sub new
  	{
@@ -174,7 +174,7 @@
  		my $count = 0;
  		until($ra_lines = $self->{_connection}->dir($p) || ++$count > 3)
  			{
-			$self->{_connection}->abort() if($self->Connect());
+			$self->Connect() unless($self->{_connection}->abort());
  			}
  		if($self->{_debug})
  			{
@@ -549,6 +549,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 
