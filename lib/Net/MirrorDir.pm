@@ -28,7 +28,7 @@
  package Net::MirrorDir;
  use Net::FTP;
  use vars '$AUTOLOAD';
- $Net::MirrorDir::VERSION = '0.17';
+ $Net::MirrorDir::VERSION = '0.18';
 #-------------------------------------------------
  sub new
  	{
@@ -158,13 +158,8 @@
  	{
  	my ($self, $dir) = @_;
  	$dir ||= $self->{_remotedir};
- 	return({}, {}) 
- 		unless(
- 			$self->IsConnection()
- 			&& 
- 			eval { $self->{_connection}->cwd($dir); }
- 			);
- 	$self->{_connection}->cwd();
+ 	return({}, {}) unless(eval { $self->{_connection}->cwd($dir); });
+ 	return({}, {}) unless($self->{_connection}->cwd());
  	$self->{_remotefiles} = {};
  	$self->{_remotedirs} = {};
  	$self->{_readremotedir} = sub 
@@ -549,6 +544,7 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
 
 
 
