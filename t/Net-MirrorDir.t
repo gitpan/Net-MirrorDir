@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 238;
+ use Test::More tests => 260;
 # use Test::More "no_plan";
  BEGIN { use_ok('Net::MirrorDir') };
 
@@ -17,7 +17,7 @@
  	localdir		=> "TestA",
  	remotedir	=> "TestD",
  	ftpserver		=> "www.net.de",
- 	usr		=> 'e-mail@address.de',
+ 	user		=> 'e-mail@address.de',
  	pass		=> "xyz", 	
  	);
  isa_ok($mirror, "Net::MirrorDir");
@@ -101,19 +101,59 @@
  ok(Net::MirrorDir::SetSubset($mirror, ["my_files"]));
  ok(Net::MirrorDir::GetSubset($mirror)->[0] eq "my_files");
  ok(Net::MirrorDir::SetSubset($mirror, []));
- ok($mirror->SetFtpServer("home.perl.de"));
- ok(my $server = $mirror->GetFtpServer());
- ok($server eq "home.perl.de");
+#-------------------------------------------------
+# test for attribute "debug"
+ ok($mirror->set_debug(0));
+ ok($mirror->get_debug() == 0);
+ ok($mirror->SetDebug(10));
+ ok($mirror->GetDebug() == 10);
+#-------------------------------------------------
+# tests for attribute "localdir"
  ok($mirror->Set_localdir("home"));
- ok(my $localdir = $mirror->GetLocalDir());
- ok($localdir eq "home");
+ ok($mirror->GetLocalDir() eq "home");
+#-------------------------------------------------
+#tests for attribute "remotedir"
  ok($mirror->Setremotedir("website"));
- ok(my $remotedir = $mirror->GetRemotedir());
- ok($remotedir eq "website");
+ ok($mirror->GetRemotedir() eq "website");
+#-------------------------------------------------
+# tests for attribute "ftpserver"
+ ok($mirror->SetFtpServer("home.perl.de"));
+ ok($mirror->GetFtpServer() eq "home.perl.de");
  ok($mirror->Set_ftpserver("ftp.net.de"));
- ok(my $ftpserver = $mirror->Get_Ftpserver());
- ok($ftpserver eq "ftp.net.de");
- ok($mirror->set_usr("myself"));
+ ok($mirror->Get_Ftpserver() eq "ftp.net.de");
+#-------------------------------------------------
+# tests for attribute "user"
+ ok($mirror->set_user("myself"));
+ ok($mirror->get_user() eq "myself");
+#-------------------------------------------------
+# tests for attribute "pass"
+ ok($mirror->SetPass("xyz"));
+ ok($mirror->getpass() eq "xyz");
+#-------------------------------------------------
+# tests for attribute "timeout"
+ ok($mirror->SetTimeOut(120));
+ ok($mirror->gettimeout() == 120);
+#-------------------------------------------------
+# tests for class-attribute "connection"
+ ok($mirror->SetConnection("connection"));
+ ok($mirror->GetConnection() eq "connection");
+ ok($Net::MirrorDir::_connection eq "connection");
+ ok($mirror->setconnection(undef));
+ ok(!$mirror->getconnection());
+ ok(!$Net::MirrorDir::_connection);
+#-------------------------------------------------
+# tests with multiple instances
+ my @instances = map
+ 	{
+ 	Net::MirrorDir->new(
+		ftpserver	=> "www.net.de",
+ 		user	=> 'e-mail@address.de',
+ 		pass	=> "xyz", 	
+ 		);
+ 	} 1..5;
+ ok(@instances == 5);
+ ok($instances[$_]->SetConnection($_)) for(0..4);
+ ok($instances[$_]->GetConnection() == 4) for(0..4);
 #-------------------------------------------------
 # tests with wrong values
  ok($mirror->SetLocalDir());
@@ -196,7 +236,7 @@
  		localdir		=> 'TestA',
  		remotedir	=> '/authors/id/K/KN/KNORR/Remote/TestA',
  		ftpserver		=> 'www.cpan.org',
- 		usr		=> 'anonymous',
+ 		user		=> 'anonymous',
  		pass		=> 'create-soft@tiscali.de', 	
  		exclusions	=> ['CHECKSUMS']
  		);
@@ -251,7 +291,7 @@
  		localdir		=> $l,
  		remotedir	=> $r,
  		ftpserver		=> $s,
- 		usr		=> $u,
+ 		user		=> $u,
  		pass		=> $p, 	
  		));
  	ok($m->Connect());
@@ -285,6 +325,8 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
+
+
 
 
 

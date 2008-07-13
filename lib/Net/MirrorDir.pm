@@ -6,53 +6,65 @@
  use strict;
 #-------------------------------------------------
  package Net::MirrorDir::LocalDir;
- sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub TIESCALAR { my ($class, $obj) = @_; return bless(\$obj, $class || ref($class)); }
  sub STORE { $_[1] ||= '.'; ${$_[0]}->{_regex_localdir} = qr!^\Q$_[1]\E!; }
- sub FETCH { return(${$_[0]}->{_localdir}); }
+ sub FETCH { return ${$_[0]}->{_localdir}; }
 #-------------------------------------------------
  package Net::MirrorDir::RemoteDir;
- sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub TIESCALAR { my($class, $obj) = @_; return bless(\$obj, $class || ref($class)); }
  sub STORE { $_[1] ||= ''; ${$_[0]}->{_regex_remotedir} = qr!^\Q$_[1]\E!; }
- sub FETCH { return(${$_[0]}->{_remotedir}); }
+ sub FETCH { return ${$_[0]}->{_remotedir}; }
 #-------------------------------------------------
  package Net::MirrorDir::Exclusions;
- sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub TIESCALAR { my ($class, $obj) = @_; return bless(\$obj, $class || ref($class)); }
  sub STORE { @{${$_[0]}->{_regex_exclusions}} = map { qr/$_/ } @{${$_[0]}->{_exclusions}}; }
- sub FETCH { return(${$_[0]}->{_exclusions}); }
+ sub FETCH { return ${$_[0]}->{_exclusions}; }
 #-------------------------------------------------
  package Net::MirrorDir::Subset;
- sub TIESCALAR { my ($class, $obj) = @_; return(bless(\$obj, $class || ref($class))); }
+ sub TIESCALAR { my ($class, $obj) = @_; return bless(\$obj, $class || ref($class)); }
  sub STORE { @{${$_[0]}->{_regex_subset}} = map { qr/$_/ } @{${$_[0]}->{_subset}}; }
- sub FETCH { return(${$_[0]}->{_subset}); }
+ sub FETCH { return ${$_[0]}->{_subset}; }
+#-------------------------------------------------
+ package Net::MirrorDir::Connection;
+ sub TIESCALAR	{ return bless($_[1], $_[0] || ref($_[0])); }
+ sub STORE	{ ${$_[0]} = $_[1]; }
+ sub FETCH	{ return ${$_[0]}; }
 #-------------------------------------------------
  package Net::MirrorDir;
  use Net::FTP;
  use vars '$AUTOLOAD';
- $Net::MirrorDir::VERSION = '0.18';
+ $Net::MirrorDir::VERSION		= '0.19';
+ $Net::MirrorDir::_connection	= undef;
 #-------------------------------------------------
  sub new
  	{
  	my ($class, %arg) = @_;
- 	my $self =
+ 	my $self = 
  		{
- 		_ftpserver	=> $arg{ftpserver}		|| warn("missing ftpserver"),
- 		_usr		=> $arg{usr}		|| warn("missing username"),
- 		_pass		=> $arg{pass}		|| warn("missing password"),
- 		_debug		=> $arg{debug}		|| 1,
- 		_timeout		=> $arg{timeout}		|| 30,
- 		_connection	=> $arg{connection}	|| undef,
+ 		_ftpserver	=> $arg{ftpserver}	|| warn("missing ftpservername"),
+ 		_user		=> $arg{user}	|| warn("missing username"),
+ 		_pass		=> $arg{pass}	|| warn("missing password"),
+ 		_timeout		=> $arg{timeout}	|| 30,
+ 		_connection	=> 
+ $Net::MirrorDir::_connection	|| $arg{connection} || undef, 
+ 		_debug		=> $arg{debug}	|| 1
  		};
  	bless($self, $class || ref($class));
- 	tie($self->{_localdir},	"Net::MirrorDir::LocalDir", $self);
- 	tie($self->{_remotedir},	"Net::MirrorDir::RemoteDir", $self);
- 	tie($self->{_exclusions},	"Net::MirrorDir::Exclusions", $self);
- 	tie($self->{_subset},	"Net::MirrorDir::Subset", $self);
+ 	tie($self->{_localdir},	"Net::MirrorDir::LocalDir",		$self);
+ 	tie($self->{_remotedir},	"Net::MirrorDir::RemoteDir",	$self);
+ 	tie($self->{_exclusions},	"Net::MirrorDir::Exclusions",	$self);
+ 	tie($self->{_subset},	"Net::MirrorDir::Subset",		$self);
+ 	tie(
+ 		$self->{_connection},	
+ 		"Net::MirrorDir::Connection",	
+ 		\$Net::MirrorDir::_connection
+ 		);
  	$self->{_localdir}		= $arg{localdir}	|| '.';
  	$self->{_remotedir}	= $arg{remotedir}	|| '';
  	$self->{_exclusions}	= $arg{exclusions}	|| [];
  	$self->{_subset}		= $arg{subset}	|| [];
 	$self->_Init(%arg) if(__PACKAGE__ ne ref($self));
- 	return($self);
+ 	return $self;
  	}
 #-------------------------------------------------
  sub _Init
@@ -64,40 +76,40 @@
  sub Connect
  	{
  	my ($self) = @_;
- 	return($self->{_connection}) if($self->IsConnection());
+ 	return($Net::MirrorDir::_connection) if($self->IsConnection());
  	eval
  		{
- 	 	$self->{_connection} = Net::FTP->new(
+ 	 	$Net::MirrorDir::_connection = Net::FTP->new(
  			$self->{_ftpserver},
  			Debug	=> $self->{_debug},
  			Timeout	=> $self->{_timeout},
  			) or warn("Cannot connect to $self->{_ftpserver} : $@\n");
- 		if($self->{_connection}->login($self->{_usr}, $self->{_pass}))
+ 		if($Net::MirrorDir::_connection->login($self->{_user}, $self->{_pass}))
  			{
- 		 	$self->{_connection}->binary();
+ 		 	$Net::MirrorDir::_connection->binary();
  			}
  		else
  			{
- 			$self->{_connection}->quit();
- 			$self->{_connection} = undef;
+ 			$Net::MirrorDir::_connection->quit();
+ 			$Net::MirrorDir::_connection = undef;
  			print("\nerror in login\n") if($self->{_debug});
- 			return(0);
+ 			return 0;
  			}
- 		return(1);
+ 		return 1;
  		};
  	}
 #-------------------------------------------------
  sub IsConnection
  	{
- 	return(eval { $_[0]->{_connection}->pwd(); });
+ 	return eval { $Net::MirrorDir::_connection->pwd(); };
  	}
 #-------------------------------------------------
  sub Quit
  	{
  	my ($self) = @_;
- 	$self->{_connection}->quit() if($self->IsConnection());
- 	$self->{_connection} = undef;
- 	return(1);
+ 	$Net::MirrorDir::_connection->quit() if($self->IsConnection());
+ 	$Net::MirrorDir::_connection = undef;
+ 	return 1;
  	}
 #-------------------------------------------------
  sub ReadLocalDir
@@ -158,8 +170,8 @@
  	{
  	my ($self, $dir) = @_;
  	$dir ||= $self->{_remotedir};
- 	return({}, {}) unless(eval { $self->{_connection}->cwd($dir); });
- 	return({}, {}) unless($self->{_connection}->cwd());
+ 	return({}, {}) unless(eval { $Net::MirrorDir::_connection->cwd($dir); });
+ 	return({}, {}) unless($Net::MirrorDir::_connection->cwd());
  	$self->{_remotefiles} = {};
  	$self->{_remotedirs} = {};
  	$self->{_readremotedir} = sub 
@@ -167,9 +179,9 @@
  		my ($self, $p) = @_;
  		my (@info, $name, $np, $ra_lines);
  		my $count = 0;
- 		until($ra_lines = $self->{_connection}->dir($p) || ++$count > 3)
+ 		until($ra_lines = $Net::MirrorDir::_connection->dir($p) || ++$count > 3)
  			{
-			$self->Connect() unless($self->{_connection}->abort());
+			$self->Connect() unless($Net::MirrorDir::_connection->abort());
  			}
  		if($self->{_debug})
  			{
@@ -208,7 +220,7 @@
  			}
 		return($self->{_remotefiles}, $self->{_remotedirs});
  		};
- 	return($self->{_readremotedir}->($self, $dir));
+ 	return $self->{_readremotedir}->($self, $dir);
  	}
 #-------------------------------------------------
  sub LocalNotInRemote
@@ -222,7 +234,7 @@
  		$rp =~ s!$self->{_regex_localdir}!$self->{_remotedir}!;
  		push(@lnir, $lp) unless(defined($rh_rp->{$rp}));
  		}
- 	return(\@lnir);
+ 	return \@lnir;
  	}
 #-------------------------------------------------
  sub RemoteNotInLocal
@@ -236,7 +248,7 @@
  		$lp =~ s!$self->{_regex_remotedir}!$self->{_localdir}!;
  		push(@rnil, $rp) unless(defined($rh_lp->{$lp}));
  		}
- 	return(\@rnil);
+ 	return \@rnil;
  	}
 #-------------------------------------------------
  sub AUTOLOAD
@@ -251,9 +263,9 @@
  			{
  			*{$AUTOLOAD} = sub
  				{
- 				return($_[0]->{$attr});
+ 				return $_[0]->{$attr};
  				};
- 			return($self->{$attr});
+ 			return $self->{$attr};
  			}
  		else
  			{
@@ -269,10 +281,10 @@
  			*{$AUTOLOAD} = sub
  				{
  				$_[0]->{$attr} = $_[1];
- 				return(1);
+ 				return 1;
  				};
  			$self->{$attr} = $value;
- 			return(1);
+ 			return 1;
  			}
  		else
  			{
@@ -288,10 +300,10 @@
  			*{$AUTOLOAD} = sub
  				{
  				$_[0]->{$attr} = [@{$_[0]->{$attr}}, $_[1]];
- 				return(1);
+ 				return 1;
  				};
  			$self->{$attr} = [@{$self->{$attr}}, $value]; 
- 			return(1);
+ 			return 1;
  			}
  		else
  			{
@@ -302,7 +314,7 @@
  		{
  		warn("\nno such method : $AUTOLOAD\n");
  		}
- 	return(0);
+ 	return 0;
  	}
 #-------------------------------------------------
  sub DESTROY
@@ -328,19 +340,25 @@ Net::MirrorDir - Perl extension for compare local-directories and remote-directo
   use Net::MirrorDir;
   my $md = Net::MirrorDir->new(
  	ftpserver		=> "my_ftp.hostname.com",
- 	usr		=> "my_ftp_usr_name",
+ 	user		=> "my_ftp_user_name",
  	pass		=> "my_ftp_password",
  	);
  my ($ref_h_local_files, $ref_h_local_dirs) = $md->ReadLocalDir();
  my ($ref_h_remote_files, $ref_h_remote_dirs) = $md->ReadRemoteDir();
- my $ref_a_new_remote_files = $md->RemoteNotInLocal($ref_h_local_files, $ref_h_remote_files);
- my $ref_a_new_local_files = $md->LocalNotInRemote($ref_h_local_files, $ref_h_remote_files);
+ my $ref_a_remote_files_not_in_local = $md->RemoteNotInLocal(
+ 	$ref_h_local_files, 
+ 	$ref_h_remote_files
+ 	);
+ my $ref_a_local_files_not_in_remote = $md->LocalNotInRemote(
+ 	$ref_h_local_files, 
+ 	$ref_h_remote_files
+ 	);
  $md->Quit();
 
  or more detailed
  my $md = Net::MirrorDir->new(
  	ftpserver		=> "my_ftp.hostname.com",
- 	usr		=> "my_ftp_usr_name",
+ 	user		=> "my_ftp_user_name",
  	pass		=> "my_ftp_password",
  	localdir		=> "home/nameA/homepageA",
  	remotedir	=> "public",
@@ -373,25 +391,37 @@ Net::MirrorDir - Perl extension for compare local-directories and remote-directo
  	print("remote files : $_\n") for(sort keys %{$ref_h_remote_files});
  	print("remote dirs : $_\n") for(sort keys %{$ref_h_remote_dirs});
  	}
- my $ref_a_new_local_files = $md->LocalNotInRemote($ref_h_local_files, $ref_h_remote_files);
+ my $ref_a_local_files_not_in_remote = $md->LocalNotInRemote(
+ 	$ref_h_local_files, 
+ 	$ref_h_remote_files
+ 	);
  if($md->{_debug})
  	{
- 	print("new local files : $_\n") for(@{$ref_a_new_local_files});
+ 	print("new local files : $_\n") for(@{$ref_a_local_files_not_in_remote});
  	}
- my $ref_a_new_local_dirs = $md->LocalNotInRemote($ref_h_local_dirs, $ref_h_remote_dirs);
+ my $ref_a_local_dirs_not_in_remote = $md->LocalNotInRemote(
+ 	$ref_h_local_dirs, 
+ 	$ref_h_remote_dirs
+ 	);
  if($md->{_debug})
  	{
- 	print("new local dirs : $_\n") for(@{$ref_a_new_local_dirs});
+ 	print("new local dirs : $_\n") for(@{$ref_a_local_dirs_not_in_remote});
  	}
- my $ref_a_new_remote_files = $md->RemoteNotInLocal($ref_h_local_files, $ref_h_remote_files);
+ my $ref_a_remote_files_not_in_local = $md->RemoteNotInLocal(
+ 	$ref_h_local_files, 
+ 	$ref_h_remote_files
+ 	);
  if($md->{_debug})
  	{
- 	print("new remote files : $_\n") for(@{$ref_a_new_remote_files});
+ 	print("new remote files : $_\n") for(@{$ref_a_remote_files_not_in_local});
  	}
- my $ref_a_new_remote_dirs = $md->RemoteNotInLocal($ref_h_local_dirs, $ref_h_remote_dirs);
+ my $ref_a_remote_dirs_not_in_local = $md->RemoteNotInLocal(
+ 	$ref_h_local_dirs, 
+ 	$ref_h_remote_dirs
+ 	);
  if($md->{_debug})
  	{
- 	print("new remote dirs : $_\n") for(@{$ref_a_new_remote_dirs});
+ 	print("new remote dirs : $_\n") for(@{$ref_a_remote_dirs_not_in_local});
  	}
  $md->Quit();
 
@@ -408,13 +438,13 @@ To find which files where in which directory available.
 
 =head2 required optines
 
-=item ftpserver
+=item ftpserver 
 the hostname of the ftp-server
 
-=item usr	
+=item user 
 the username for authentification
 
-=item pass
+=item pass 
 password for authentification
 
 =head2 optional optiones
@@ -431,10 +461,10 @@ default '/'
 set it true for more information about the ftp-process
 default 1 
 
-=item timeout
+=item timeout 
 the timeout for the ftp-serverconnection, default 30
 
-=item connection
+=item connection (class-attribute)
 takes a Net::FTP-object, you should not create the object by yourself,
 instead of this call the Connect(); function to set the connection.
 default undef
@@ -482,13 +512,19 @@ Uses the attributes "ftpserver", "usr" and "pass".
 =item (1)object->Quit(void)
 Closes the connection with the ftp-server.
 
-=item (ref_list_new_paths)object->LocalNotInRemote(ref_hash_local_paths, ref_hash_remote_paths)
+=item (ref_list_paths_not_in_remote)object->LocalNotInRemote(
+ 	ref_hash_local_paths, 
+ 	ref_hash_remote_paths
+ 	)
 Takes two hashreferences, first the localpaths, second the remotepaths,
 to compare with each other. 
 Returns a reference of a list with files or directorys found in 
 the local directory but not in the remote location.
 
-=item (ref_list_deleted_paths)object->RemoteNotInLocal(ref_hash_local_paths, ref_hash_remote_paths)
+=item (ref_list_paths_not_in_local)object->RemoteNotInLocal(
+ 	ref_hash_local_paths, 
+ 	ref_hash_remote_paths
+ 	)
 Takes two hashreferences, first the localpaths, second the remotepaths,
 to compare with each other. 
 Returns a reference of a list with files or directorys found in 
@@ -544,6 +580,9 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
+
+
+
 
 
 
