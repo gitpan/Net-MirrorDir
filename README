@@ -1,4 +1,4 @@
-Net-MirrorDir version 0.19
+Net-MirrorDir version 0.20
 ==========================
 
  This module is written as base class for Net::UploadMirror and Net::DownloadMirror.
@@ -27,21 +27,9 @@ This module requires these other modules and libraries:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2006 - 2008 by Torsten Knorr
+Copyright (C) 2006 - 2009 by Torsten Knorr
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.9.2 or,
 at your option, any later version of Perl 5 you may have available.
-
-
-
-
-
-
-
-
-
-
-
-
 

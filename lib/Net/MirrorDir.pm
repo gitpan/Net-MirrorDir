@@ -1,6 +1,6 @@
 #*** MirrorDir.pm ***#
-# Copyright (C) 2006 - 2008 by Torsten Knorr
-# create-soft@tiscali.de
+# Copyright (C) 2006 - 2009 by Torsten Knorr
+# create-soft@freenet.de
 # All rights reserved!
 #-------------------------------------------------
  use strict;
@@ -33,7 +33,7 @@
  package Net::MirrorDir;
  use Net::FTP;
  use vars '$AUTOLOAD';
- $Net::MirrorDir::VERSION		= '0.19';
+ $Net::MirrorDir::VERSION		= '0.20';
  $Net::MirrorDir::_connection	= undef;
 #-------------------------------------------------
  sub new
@@ -47,7 +47,7 @@
  		_timeout		=> $arg{timeout}	|| 30,
  		_connection	=> 
  $Net::MirrorDir::_connection	|| $arg{connection} || undef, 
- 		_debug		=> $arg{debug}	|| 1
+ 		_debug		=> defined($arg{debug}) ? $arg{debug} : 1
  		};
  	bless($self, $class || ref($class));
  	tie($self->{_localdir},	"Net::MirrorDir::LocalDir",		$self);
@@ -320,11 +320,7 @@
  sub DESTROY
  	{
  	my ($self) = @_;
- 	if($self->{_debug})
- 		{
- 		my $class = ref($self);
- 		print("$class object destroyed\n");
- 		} 
+	print($self || ref($self) . "object destroyed\n") if($self->{_debug}); 
  	}
 #-------------------------------------------------
 1;
@@ -373,8 +369,8 @@ Net::MirrorDir - Perl extension for compare local-directories and remote-directo
 #	exclusions	=> ["psw", "forbidden_code"]
 #	subset		=> ["name", "my_files"]
 # or you can use regular expressions
-# 	exclusinos	=> [qr/SYSTEM/i, $regex]
-# 	subset		=> {qr/(?i:HOME)(?i:PAGE)?/, $regex]
+# 	exclusions	=> [qr/SYSTEM/i, $regex]
+# 	subset		=> [qr/(?i:HOME)(?i:PAGE)?/, $regex]
  	);
  $md->SetLocalDir("home/name/homepage");
  print("hostname : ", $md->get_ftpserver(), "\n");
@@ -458,7 +454,8 @@ remote location
 default '/' 
 
 =item debug
-set it true for more information about the ftp-process
+Set it to a true value (1 'yes' 'ok') for information about the ftp-process,
+or false (0 '') to avoid debug output.
 default 1 
 
 =item timeout 
@@ -481,7 +478,7 @@ takes a reference to a list of strings interpreted as regular-expressios
 matching to something in the local or remote pathnames,
 pathnames NOT matching will be ignored.
 You can also use a regex object [qr/TXT/i, "name", qr/MY_FILES/i, $regex]
-default []
+default empty list [ ]
 
 =head2 methods
 
@@ -552,7 +549,7 @@ None by default.
 Net::UploadMirror
 Net::DownloadMirror
 Net::FTP
-http://www.planet-interkom.de/t.knorr/index.html
+http://www.freenet-homepage.de/torstenknorr
 
 =head1 FILES
 
@@ -568,11 +565,11 @@ When reporting bugs/problems please include as much information as possible.
 
 =head1 AUTHOR
 
-Torsten Knorr, E<lt>create-soft@tiscali.deE<gt>
+Torsten Knorr, E<lt>create-soft@freenet.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2006 - 2008 by Torsten Knorr
+Copyright (C) 2006 - 2009 by Torsten Knorr
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.9.2 or,
@@ -580,29 +577,4 @@ at your option, any later version of Perl 5 you may have available.
 
 
 =cut
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

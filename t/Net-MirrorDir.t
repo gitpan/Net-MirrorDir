@@ -5,7 +5,7 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
- use Test::More tests => 260;
+ use Test::More tests => 262;
 # use Test::More "no_plan";
  BEGIN { use_ok('Net::MirrorDir') };
 
@@ -104,7 +104,9 @@
 #-------------------------------------------------
 # test for attribute "debug"
  ok($mirror->set_debug(0));
- ok($mirror->get_debug() == 0);
+ ok(!$mirror->get_debug());
+ ok($mirror->setdebug(''));
+ ok(!$mirror->getdebug());
  ok($mirror->SetDebug(10));
  ok($mirror->GetDebug() == 10);
 #-------------------------------------------------
@@ -325,14 +327,4 @@
  	 warn("\nfound: $_\n")for(keys(%{$mirror->GetLocalFiles()}));
  	}
 #-------------------------------------------------
-
-
-
-
-
-
-
-
-
-
 
